@@ -1,0 +1,14 @@
+/* Editor styling */
+.cm-editor { height: 100%; font-size: 14px; }
+
+.cm-editor .cm-scroller {
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  line-height: 1.65;
+}
+
+.cm-editor .cm-matchingBracket { background-color: var(--accent-light); border-radius: 3px; }
+.cm-editor .cm-nonmatchingBracket { background-color: var(--red-light); border-radius: 3px; }
+
+/* PDF fade */
+@keyframes pdfFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.pdf-canvas-fade-in { animation: pdfFadeIn 0.3s ease-out; }
