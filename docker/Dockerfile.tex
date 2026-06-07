@@ -1,0 +1,21 @@
+FROM pandoc/latex:latest
+
+# Install pdftotext for PDF text extraction
+RUN apk add --no-cache poppler-utils
+
+# Install LaTeX recommended packages + extras
+RUN tlmgr install \
+  texlive-latex-recommended \
+  titlesec \
+  enumitem \
+  marvosym \
+  2>&1; exit 0
+
+# fullpage.sty was removed from TeX Live 2026 — include from local
+RUN mkdir -p /opt/texlive/texmf-local/tex/latex/fullpage
+COPY fullpage.sty /opt/texlive/texmf-local/tex/latex/fullpage/fullpage.sty
+RUN /opt/texlive/texdir/bin/default/mktexlsr
+
+RUN tlmgr path add 2>&1; exit 0
+
+CMD ["sh"]
