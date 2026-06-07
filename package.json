@@ -1,0 +1,27 @@
+{
+  "name": "overleaf",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "db:migrate": "pnpm --filter @overleaf/db db:migrate",
+    "db:seed": "pnpm --filter @overleaf/db db:seed",
+    "db:generate": "pnpm --filter @overleaf/db db:generate",
+    "db:reset": "bash scripts/db-reset.sh",
+    "test:integration": "pnpm --filter @overleaf/api exec vitest run src/routes/compile.integration.test.ts 2>/dev/null || npx vitest run src/routes/compile.integration.test.ts",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0",
+    "prettier": "^3.4.0",
+    "@types/node": "^22.0.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
