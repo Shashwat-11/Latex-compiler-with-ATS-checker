@@ -8,7 +8,7 @@ interface Props { projectId: string; projectName: string; onSaveBeforeCompile?: 
 export function ProjectHeader({ projectId, projectName, onSaveBeforeCompile }: Props) {
   const { compile } = useCompilation(projectId);
   const { isCompiling, status, compileTimeMs, errorLine } = useCompilationStore();
-  const handleCompile = () => { onSaveBeforeCompile?.(); compile(); };
+  const handleCompile = () => { onSaveBeforeCompile?.(); setTimeout(() => compile(), 500); };
 
   return (
     <header className="flex items-center justify-between h-10 px-4 border-b border-[var(--border-default)] bg-[var(--bg)] shrink-0">
