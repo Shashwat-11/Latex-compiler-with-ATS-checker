@@ -1,0 +1,17 @@
+% fullpage.sty — Sets 1-inch margins on US letter paper
+% Supports options: empty (no page numbers), plain (page numbers)
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{fullpage}[2024/01/01 Full page margins]
+
+\DeclareOption{empty}{\pagestyle{empty}}
+\DeclareOption{plain}{\pagestyle{plain}}
+\ExecuteOptions{plain}
+\ProcessOptions\relax
+
+\setlength{\textwidth}{6.5in}
+\setlength{\oddsidemargin}{0in}
+\setlength{\evensidemargin}{0in}
+\setlength{\textheight}{8.5in}
+\setlength{\topmargin}{0in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}

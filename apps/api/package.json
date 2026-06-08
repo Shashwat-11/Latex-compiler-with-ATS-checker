@@ -1,0 +1,38 @@
+{
+  "name": "@overleaf/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "@fastify/cors": "^10.0.0",
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/jwt": "^9.0.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "drizzle-orm": "^0.38.0",
+    "@fastify/websocket": "^11.0.0",
+    "zod": "^3.24.0",
+    "argon2": "^0.41.0",
+    "dockerode": "^4.0.0",
+    "pdfjs-dist": "^4.9.0",
+    "dotenv": "^16.4.0",
+    "@overleaf/shared": "workspace:*",
+    "@overleaf/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "vitest": "^3.0.0",
+    "@types/dockerode": "^3.3.0"
+  }
+}
