@@ -15,7 +15,7 @@ export function AuthLayout() {
     );
   }
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to="/login?reason=session_expired" replace />;
 
   return (
     <div className="flex h-screen bg-[var(--bg)] text-[var(--text-primary)] overflow-hidden transition-colors duration-[var(--transition-base)]">

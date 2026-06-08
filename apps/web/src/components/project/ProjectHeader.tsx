@@ -13,6 +13,7 @@ export function ProjectHeader({ projectId, projectName, onSaveBeforeCompile }: P
   return (
     <header className="flex items-center justify-between h-10 px-4 border-b border-[var(--border-default)] bg-[var(--bg)] shrink-0 select-none">
       <h2 className="text-[13px] font-semibold text-[var(--text-primary)] truncate mr-4">{projectName}</h2>
+      <Tooltip.Provider>
       <div className="flex items-center gap-3 shrink-0 min-w-0">
         {errorLine && <span className="text-[11px] text-[var(--danger)] flex-1 min-w-0 truncate" title={errorLine}><AlertCircle className="inline h-3 w-3 mr-1" />{errorLine}</span>}
         {status === 'success' && compileTimeMs ? (
@@ -25,7 +26,6 @@ export function ProjectHeader({ projectId, projectName, onSaveBeforeCompile }: P
             </Tooltip.Portal>
           </Tooltip.Root>
         ) : null}
-        <Tooltip.Provider>
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
               <button onClick={handleCompile} disabled={isCompiling} className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-emphasis)] px-3 py-1 text-[12px] font-medium text-white hover:bg-[var(--accent)] disabled:opacity-50 transition-all shrink-0">
@@ -39,8 +39,8 @@ export function ProjectHeader({ projectId, projectName, onSaveBeforeCompile }: P
               </Tooltip.Content>
             </Tooltip.Portal>
           </Tooltip.Root>
-        </Tooltip.Provider>
       </div>
+      </Tooltip.Provider>
     </header>
   );
 }

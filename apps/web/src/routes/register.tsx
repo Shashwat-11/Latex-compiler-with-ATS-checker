@@ -22,7 +22,11 @@ export function RegisterPage() {
             <div><label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Name</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required className={inputClass} placeholder="Your name" /></div>
             <div><label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Email</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} placeholder="you@example.com" /></div>
             <div><label className="mb-1 block text-[12px] font-medium text-[var(--text-secondary)]">Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className={inputClass} placeholder="Min 8 characters" /></div>
-            {register.isError && <p className="text-[12px] text-[var(--danger)]">Registration failed</p>}
+            {register.isError && (
+              <p className="text-[12px] text-[var(--danger)]">
+                {(register.error as any)?.response?.data?.error?.message || 'Registration failed. Please try again.'}
+              </p>
+            )}
             <button type="submit" disabled={register.isPending} className="w-full rounded-[var(--radius-sm)] bg-[var(--accent-emphasis)] px-4 py-2 text-[13px] font-medium text-white hover:bg-[var(--accent)] disabled:opacity-50 transition-all">{register.isPending ? 'Creating...' : 'Create Account'}</button>
           </form>
         </div>
