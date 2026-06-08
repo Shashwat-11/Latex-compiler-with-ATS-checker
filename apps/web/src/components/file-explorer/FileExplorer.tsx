@@ -4,6 +4,7 @@ import { FileTree } from './FileTree.js';
 import { FilePlus, FolderPlus } from 'lucide-react';
 import { useState } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { SkeletonGroup } from '../shared/Skeleton.js';
 import type { FileNode } from '@overleaf/shared';
 
 interface Props { projectId: string; }
@@ -62,7 +63,7 @@ export function FileExplorer({ projectId }: Props) {
         )}
 
         <div className="flex-1 overflow-auto py-1">
-          {isLoading ? <div className="flex justify-center py-4"><div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border-default)] border-t-[var(--accent)]" /></div> : <FileTree files={files ?? []} level={0} onFileClick={handleFileClick} onDelete={handleDelete} />}
+          {isLoading ? <div className="px-3 py-2"><SkeletonGroup count={5} className="h-4 w-3/4" /></div> : <FileTree files={files ?? []} level={0} onFileClick={handleFileClick} onDelete={handleDelete} />}
         </div>
       </div>
     </Tooltip.Provider>

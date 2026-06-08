@@ -15,7 +15,16 @@ export function ProjectHeader({ projectId, projectName, onSaveBeforeCompile }: P
       <h2 className="text-[13px] font-semibold text-[var(--text-primary)] truncate mr-4">{projectName}</h2>
       <div className="flex items-center gap-3 shrink-0 min-w-0">
         {errorLine && <span className="text-[11px] text-[var(--danger)] flex-1 min-w-0 truncate" title={errorLine}><AlertCircle className="inline h-3 w-3 mr-1" />{errorLine}</span>}
-        {status === 'success' && compileTimeMs && <span className="text-[11px] text-[var(--success)] shrink-0"><CheckCircle2 className="inline h-3 w-3 mr-1" />{compileTimeMs < 1000 ? `${compileTimeMs}ms` : `${(compileTimeMs/1000).toFixed(1)}s`}</span>}
+        {status === 'success' && compileTimeMs ? (
+          <Tooltip.Root>
+            <Tooltip.Trigger asChild>
+              <span className="text-[11px] text-[var(--success)] shrink-0 cursor-default"><CheckCircle2 className="inline h-3 w-3 mr-1" />{compileTimeMs < 1000 ? `${compileTimeMs}ms` : `${(compileTimeMs/1000).toFixed(1)}s`}</span>
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content className="rounded-[var(--radius-sm)] bg-[var(--text-primary)] px-2 py-1 text-[11px] text-[var(--text-inverse)] shadow-[var(--shadow-md)]">Compilation successful<Tooltip.Arrow className="fill-[var(--text-primary)]" /></Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip.Root>
+        ) : null}
         <Tooltip.Provider>
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
