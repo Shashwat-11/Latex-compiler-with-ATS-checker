@@ -1,13 +1,21 @@
 /* Editor styling */
-.cm-editor { height: 100%; font-size: 14px; }
+.cm-editor,
+.monaco-editor { height: 100% !important; font-size: 14px; }
 
-.cm-editor .cm-scroller {
+.cm-editor .cm-scroller,
+.monaco-editor .view-lines {
   font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
   line-height: 1.65;
 }
 
-.cm-editor .cm-matchingBracket { background-color: var(--accent-light); border-radius: 3px; }
-.cm-editor .cm-nonmatchingBracket { background-color: var(--red-light); border-radius: 3px; }
+/* LaTeX syntax token colors */
+.mtk.keyword.tex  { color: #c678dd !important; }
+.mtk.command.tex  { color: #61afef !important; }
+.mtk.bracket.tex  { color: #e5c07b !important; }
+.mtk.comment.tex  { color: #5c6370 !important; }
+
+.cm-editor .cm-matchingBracket { background-color: var(--accent-light); border-radius: 2px; }
+.cm-editor .cm-nonmatchingBracket { background-color: var(--red-light); border-radius: 2px; }
 
 /* PDF fade */
 @keyframes pdfFadeIn { from { opacity: 0; } to { opacity: 1; } }

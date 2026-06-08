@@ -17,16 +17,9 @@ export function CodeEditor({ fileId, initialContent, onContentChange }: CodeEdit
 
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const handleBeforeMount: BeforeMount = (monaco) => {
-    const langs = monaco.languages.getLanguages();
-    const hasLatex = langs.some((l: { id: string }) => l.id === 'latex');
-    console.log('Has LaTeX language:', hasLatex);
+    const hasLatex = monaco.languages.getLanguages().some((l: { id: string }) => l.id === 'latex');
     if (!hasLatex) {
-      console.log('Registering LaTeX language...');
-      monaco.languages.register({
-        id: 'latex',
-        extensions: ['.tex'],
-        aliases: ['LaTeX', 'latex'],
-      });
+      monaco.languages.register({ id: 'latex', extensions: ['.tex'], aliases: ['LaTeX', 'latex'] });
       monaco.languages.setMonarchTokensProvider('latex', {
         tokenizer: {
           root: [
