@@ -1,18 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useState } from 'react';
+import { Link } from 'react-router';
 import { useLogin } from '../hooks/useAuthActions.js';
-import { useAuthStore } from '../stores/auth.store.js';
 import { ArrowRight } from 'lucide-react';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const login = useLogin();
-  const navigate = useNavigate();
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
-  // Redirect already-authenticated users to prevent flash
-  useEffect(() => { if (isAuthenticated) navigate('/dashboard', { replace: true }); }, [isAuthenticated, navigate]);
 
   const handleGuestLogin = () => login.mutate({ email: 'guest@overleaf.local', password: 'guest' });
 

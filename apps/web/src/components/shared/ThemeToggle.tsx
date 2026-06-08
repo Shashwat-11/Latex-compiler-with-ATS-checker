@@ -10,7 +10,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   const Icon = theme === 'dark' ? Moon : theme === 'system' ? Monitor : Sun;
   return (
     <button
-      onClick={() => setTheme(next)}
+      onClick={() => setTheme(next as 'light' | 'dark' | 'system')}
       className={`rounded-[var(--radius-sm)] p-1.5 text-[var(--text-tertiary)] hover:bg-[var(--bg-overlay)] hover:text-[var(--text-primary)] transition-all duration-[var(--transition-fast)] ${className ?? ''}`}
       title={`Theme: ${theme} — click for ${next}`}
       aria-label={`Switch theme to ${next}`}
