@@ -31,14 +31,12 @@ export async function optionalAuth(request: FastifyRequest, _reply: FastifyReply
   try {
     if (request.cookies.access_token) {
       await request.jwtVerify({ onlyCookie: true });
-    } else {
-      await request.jwtVerify();
-    }
-    const payload = request.user as Record<string, unknown> | null;
-    if (payload && 'sub' in payload) {
-      request.user = { id: payload.sub as string, email: payload.email as string };
+      const payload = request.user as Record<string, unknown> | null;
+      if (payload && 'sub' in payload) {
+        request.user = { id: payload.sub as string, email: payload.email as string };
+      }
     }
   } catch {
-    // No-op: user remains undefined
+    // No-op: user remains undefined — expired tokens are silently ignored
   }
 }

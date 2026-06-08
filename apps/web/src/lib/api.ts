@@ -6,6 +6,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+const AUTH_ROUTES = ['/login', '/register'];
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value: unknown) => void;
