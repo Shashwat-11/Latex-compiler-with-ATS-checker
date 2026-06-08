@@ -1,5 +1,5 @@
 import { db } from './client';
-import { users, projects, projectSettings, files } from './schema/index';
+import { users, projects, projectSettings, files, resumeTemplates } from './schema/index';
 import { randomUUID } from 'node:crypto';
 import argon2 from 'argon2';
 
@@ -228,6 +228,170 @@ IEEE Internet of Things Journal, vol. 3, no. 5, pp. 637--646, 2016.
   await db.insert(projectSettings).values({ projectId: guestProjectId, compiler: 'pdflatex', autoCompile: true, createdAt: new Date(), updatedAt: new Date() });
   await db.insert(files).values({ id: randomUUID(), projectId: guestProjectId, parentId: null, name: 'main.tex', type: 'file', content: `\\documentclass[12pt,a4paper]{article}\n\n\\title{My First Document}\n\\author{Guest}\n\\date{\\today}\n\n\\begin{document}\n\\maketitle\n\n\\section{Introduction}\nStart writing your LaTeX document here!\n\n\\end{document}`, sortOrder: 0, sizeBytes: 0, createdAt: new Date(), updatedAt: new Date() });
   console.log(`  ✅ Created guest project: Quick Start`);
+
+  // Seed resume templates
+  const templateData: Array<{
+    name: string;
+    slug: string;
+    description: string;
+    category: string;
+    latexClass: string;
+    compiler: string;
+    styleOptions: Record<string, string[]>;
+    templateFiles: Array<{ filename: string; content: string }>;
+    isActive: boolean;
+  }> = [
+    {
+      name: 'Modern CV',
+      slug: 'moderncv',
+      description: 'A clean, modern CV template with multiple style and color options. Suitable for professionals and academics.',
+      category: 'professional',
+      latexClass: 'moderncv',
+      compiler: 'pdflatex',
+      styleOptions: {
+        styles: ['classic', 'casual', 'banking', 'oldstyle', 'fancy'],
+        colors: ['blue', 'green', 'red', 'purple', 'grey', 'orange', 'black', 'burgundy'],
+      },
+      templateFiles: [
+        {
+          filename: 'main.tex',
+          content: `\\documentclass[11pt,a4paper,sans]{moderncv}
+\\moderncvstyle{%%STYLE%%}
+\\moderncvcolor{%%COLOR%%}
+
+\\name{%%FIRSTNAME%%}{%%LASTNAME%%}
+\\title{%%TITLE%%}
+\\phone[mobile]{%%PHONE%%}
+\\email{%%EMAIL%%}
+\\social[linkedin]{%%LINKEDIN%%}
+\\social[github]{%%GITHUB%%}
+
+\\begin{document}
+\\makecvtitle
+
+%%EDUCATION%%
+
+%%EXPERIENCE%%
+
+%%SKILLS%%
+
+%%PROJECTS%%
+\\end{document}`
+        },
+        {
+          filename: 'moderncv.cls',
+          content: `%% moderncv.cls placeholder — install from CTAN`,
+        },
+      ],
+      isActive: true,
+    },
+    {
+      name: 'Two-Column Resume',
+      slug: 'altacv',
+      description: 'A modern two-column layout with sidebar for skills and contact information.',
+      category: 'professional',
+      latexClass: 'altacv',
+      compiler: 'pdflatex',
+      styleOptions: {
+        colors: ['#002B5B', '#333333'],
+      },
+      templateFiles: [
+        {
+          filename: 'main.tex',
+          content: `\\documentclass[10pt,a4paper,ragged2e]{altacv}
+\\definecolor{accent}{HTML}{%%ACCENT_COLOR%%}
+
+\\name{%%FIRSTNAME%%}{%%LASTNAME%%}
+\\tagline{%%TITLE%%}
+\\personalinfo{%%PERSONAL_INFO%%}
+
+\\begin{document}
+\\makecvheader
+
+\\begin{paracol}{2}
+%%EDUCATION%%
+\\switchcolumn
+%%SKILLS%%
+\\end{paracol}
+\\end{document}`
+        },
+      ],
+      isActive: true,
+    },
+    {
+      name: 'Simple Resume',
+      slug: 'simple-resume',
+      description: 'A minimal, ATS-friendly single-column resume using standard LaTeX article class.',
+      category: 'minimal',
+      latexClass: 'article',
+      compiler: 'pdflatex',
+      styleOptions: {},
+      templateFiles: [
+        {
+          filename: 'main.tex',
+          content: `\\documentclass[11pt,letterpaper]{article}
+\\usepackage{hyperref}
+\\usepackage{geometry}
+\\geometry{margin=1in}
+
+\\begin{document}
+\\begin{center}
+{\\Huge \\bfseries %%FIRSTNAME%% \\textunderscore %%LASTNAME%%} \\\\
+%%EMAIL%% $\\mid$ %%PHONE%% $\\mid$ \\href{%%LINKEDIN%%}{LinkedIn}
+\\end{center}
+
+%%SUMMARY%%
+
+%%EDUCATION%%
+
+%%EXPERIENCE%%
+
+%%SKILLS%%
+\\end{document}`
+        },
+      ],
+      isActive: true,
+    },
+    {
+      name: 'Awesome CV',
+      slug: 'awesome-cv',
+      description: 'A stylish CV template with icon-based header and clean section layout. Requires XeLaTeX.',
+      category: 'creative',
+      latexClass: 'awesome-cv',
+      compiler: 'xelatex',
+      styleOptions: {
+        colors: ['#002B5B', '#cc0000', '#0073b7', '#005A9C'],
+      },
+      templateFiles: [
+        {
+          filename: 'main.tex',
+          content: `\\documentclass[11pt,letterpaper]{awesome-cv}
+
+\\name{%%FIRSTNAME%%}{%%LASTNAME%%}
+\\position{%%TITLE%%}
+\\email{%%EMAIL%%}
+\\phone{%%PHONE%%}
+\\linkedin{%%LINKEDIN%%}
+\\github{%%GITHUB%%}
+
+\\begin{document}
+\\makecvheader
+\\makecvfooter
+
+%%EDUCATION%%
+%%EXPERIENCE%%
+%%SKILLS%%
+\\end{document}`
+        },
+      ],
+      isActive: true,
+    },
+  ];
+
+  for (const tpl of templateData) {
+    await db.insert(resumeTemplates).values(tpl).onConflictDoNothing();
+  }
+  console.log(`  - ${templateData.length} resume templates seeded`);
 
   console.log('');
   console.log('🌱 Seeding complete!');

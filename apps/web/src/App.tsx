@@ -14,6 +14,7 @@ const RegisterPage = lazy(() => import('./routes/register.js').then(m => ({ defa
 const DashboardPage = lazy(() => import('./routes/dashboard.js').then(m => ({ default: m.DashboardPage })));
 const ProjectPage = lazy(() => import('./routes/project.$id.js').then(m => ({ default: m.ProjectPage })));
 const SettingsPage = lazy(() => import('./routes/settings.js').then(m => ({ default: m.SettingsPage })));
+const ResumeNewPage = lazy(() => import('./routes/resume-new.js').then(m => ({ default: m.ResumeNewPage })));
 const NotFoundPage = lazy(() => import('./routes/not-found.js').then(m => ({ default: m.NotFoundPage })));
 
 const PageLoader = () => (
@@ -59,6 +60,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
           <Route path="/project/:id" element={<Suspense fallback={<PageLoader />}><ProjectPage /></Suspense>} />
           <Route path="/settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
+          <Route path="/resume/new" element={<Suspense fallback={<PageLoader />}><ResumeNewPage /></Suspense>} />
         </Route>
         <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFoundPage /></Suspense>} />
       </Routes>

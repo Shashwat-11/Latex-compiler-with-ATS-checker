@@ -1,7 +1,6 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Panel, Group, Separator } from 'react-resizable-panels';
-import { useEffect } from 'react';
 import { useProject } from '../hooks/useProjects.js';
 import { FileExplorer } from '../components/file-explorer/FileExplorer.js';
 import { CodeEditor } from '../components/editor/CodeEditor.js';
@@ -10,6 +9,7 @@ import { EditorStatusBar } from '../components/editor/EditorStatusBar.js';
 import { PDFViewer } from '../components/pdf-viewer/PDFViewer.js';
 import { AtsPanel } from '../components/pdf-viewer/AtsPanel.js';
 import { ProjectHeader } from '../components/project/ProjectHeader.js';
+import { CopilotSidebar } from '../components/ai/CopilotSidebar.js';
 import { useEditorStore } from '../stores/editor.store.js';
 import { useCompilationStore } from '../stores/compilation.store.js';
 import { useCompilationSSE } from '../hooks/useCompilationSSE.js';
@@ -22,6 +22,7 @@ export function ProjectPage() {
   const { data: project, isLoading } = useProject(id ?? null);
   const { activeFileId, fileContents } = useEditorStore();
   const { compilationId } = useCompilationStore();
+  const [aiSidebarOpen, setAiSidebarOpen] = useState(false);
   const autoCompiled = useRef(false);
 
   useCompilationSSE(compilationId);
@@ -58,7 +59,13 @@ export function ProjectPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <ProjectHeader projectId={id} projectName={project.name} onSaveBeforeCompile={saveNow} />
+      <ProjectHeader
+        projectId={id}
+        projectName={project.name}
+        onSaveBeforeCompile={saveNow}
+        onToggleAiSidebar={() => setAiSidebarOpen(!aiSidebarOpen)}
+        aiSidebarOpen={aiSidebarOpen}
+      />
 
       <div className="flex flex-1 min-h-0">
         <Group orientation="horizontal" id="overleaf-editor-layout" style={{ height: '100%' }}>
@@ -82,14 +89,25 @@ export function ProjectPage() {
             </div>
           </Panel>
           <Separator className="w-1 bg-[var(--border)] hover:bg-[var(--accent)] transition-colors cursor-col-resize" />
-          <Panel defaultSize="40" minSize="20">
-            <div className="h-full border-l border-[var(--border)] flex flex-col min-h-0">
-              <div className="flex-1 min-h-0">
-                <PDFViewer />
+          {aiSidebarOpen ? (
+            <Panel defaultSize="35" minSize="25" maxSize="50">
+              <CopilotSidebar
+                projectId={id}
+                currentFileId={activeFileId ?? undefined}
+                isOpen={aiSidebarOpen}
+                onToggle={() => setAiSidebarOpen(false)}
+              />
+            </Panel>
+          ) : (
+            <Panel defaultSize="40" minSize="20">
+              <div className="h-full border-l border-[var(--border)] flex flex-col min-h-0">
+                <div className="flex-1 min-h-0">
+                  <PDFViewer />
+                </div>
+                <AtsPanel projectId={id} />
               </div>
-              <AtsPanel projectId={id} />
-            </div>
-          </Panel>
+            </Panel>
+          )}
         </Group>
       </div>
     </div>

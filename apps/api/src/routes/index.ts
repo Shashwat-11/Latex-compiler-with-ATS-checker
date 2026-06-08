@@ -6,6 +6,7 @@ import { settingsRoutes } from './settings.routes.js';
 import { fileRoutes } from './file.routes.js';
 import { compilationRoutes } from './compilation.routes.js';
 import { atsRoutes } from './ats.routes.js';
+import { aiRoutes } from './ai.routes.js';
 import { healthRoutes } from './health.routes.js';
 
 export async function registerRoutes(app: FastifyInstance) {
@@ -17,4 +18,5 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(fileRoutes, { prefix: '/api/v1/projects' });
   await app.register(compilationRoutes, { prefix: '/api/v1/projects' });
   await app.register(atsRoutes, { prefix: '/api/v1/projects' });
+  await app.register(aiRoutes, { prefix: '/api/v1' });
 }
