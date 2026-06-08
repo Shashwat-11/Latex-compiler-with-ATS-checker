@@ -1,51 +1,87 @@
 @import "tailwindcss";
 
-/* ─── Design Tokens ─────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   Dark-first Design Token System
+   Theme: light → system → dark (dark is the default/reference)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Reference tokens (dark-first) ── */
 :root {
-  --bg: #ffffff;
-  --bg-secondary: #f8f9fa;
-  --bg-tertiary: #f1f3f5;
-  --border: #e9ecef;
-  --border-light: #f1f3f5;
-  --text: #212529;
-  --text-secondary: #6c757d;
-  --text-muted: #adb5bd;
-  --accent: #4263eb;
-  --accent-hover: #3b5bdb;
-  --accent-light: #edf2ff;
-  --accent-text: #4263eb;
-  --red: #e03131;
-  --red-light: #fff5f5;
-  --green: #2f9e44;
-  --green-light: #ebfbee;
-  --amber: #f08c00;
-  --amber-light: #fff9db;
-  --radius: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.06);
+  /* Surface */
+  --bg: #0d1117;
+  --bg-elevated: #161b22;
+  --bg-overlay: #1c2129;
+  --bg-inset: #0a0e13;
+  /* Border */
+  --border-default: #30363d;
+  --border-muted: #21262d;
+  --border-emphasis: #484f58;
+  /* Text */
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-tertiary: #484f58;
+  --text-placeholder: #30363d;
+  --text-inverse: #0d1117;
+  /* Accent (blue) */
+  --accent: #58a6ff;
+  --accent-emphasis: #1f6feb;
+  --accent-muted: #0d2847;
+  --accent-text: #58a6ff;
+  --accent-light: #0d2847;
+  /* Semantic */
+  --success: #3fb950;
+  --success-muted: #0d3320;
+  --warning: #d29922;
+  --warning-muted: #2e2411;
+  --danger: #f85149;
+  --danger-muted: #3d1117;
+  --info: #79c0ff;
+  --info-muted: #0d2847;
+  /* Radii */
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  /* Shadows */
+  --shadow-sm: 0 0 0 1px #30363d;
+  --shadow-md: 0 0 0 1px #30363d, 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 0 0 1px #30363d, 0 8px 24px rgba(0,0,0,0.5);
+  /* Transitions */
+  --transition-fast: 150ms;
+  --transition-base: 200ms;
 }
 
-.dark {
-  --bg: #0d1117;
-  --bg-secondary: #161b22;
-  --bg-tertiary: #1c2129;
-  --border: #30363d;
-  --border-light: #21262d;
-  --text: #e6edf3;
-  --text-secondary: #8b949e;
-  --text-muted: #484f58;
-  --accent: #58a6ff;
-  --accent-hover: #79c0ff;
-  --accent-light: #0d2847;
-  --accent-text: #58a6ff;
-  --red: #f85149;
-  --red-light: #3d1117;
-  --green: #3fb950;
-  --green-light: #0d3320;
-  --amber: #d29922;
-  --amber-light: #2e2411;
-  --shadow: 0 0 0 1px #30363d;
-  --shadow-md: 0 0 0 1px #30363d, 0 4px 12px rgba(0,0,0,0.3);
+/* ── Light overrides ── */
+:root.light,
+:root:not(.dark) {
+  --bg: #ffffff;
+  --bg-elevated: #f8f9fa;
+  --bg-overlay: #f1f3f5;
+  --bg-inset: #f4f5f7;
+  --border-default: #e9ecef;
+  --border-muted: #f1f3f5;
+  --border-emphasis: #ced4da;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --text-tertiary: #adb5bd;
+  --text-placeholder: #ced4da;
+  --text-inverse: #ffffff;
+  --accent: #4263eb;
+  --accent-emphasis: #364fc7;
+  --accent-muted: #edf2ff;
+  --accent-text: #4263eb;
+  --accent-light: #edf2ff;
+  --success: #2f9e44;
+  --success-muted: #ebfbee;
+  --warning: #f08c00;
+  --warning-muted: #fff9db;
+  --danger: #e03131;
+  --danger-muted: #fff5f5;
+  --info: #3b82f6;
+  --info-muted: #eff6ff;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.04), 0 4px 6px rgba(0,0,0,0.05);
 }
 
 /* ─── Base ──────────────────────────────────────────────────── */

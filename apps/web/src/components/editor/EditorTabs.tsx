@@ -5,7 +5,7 @@ export function EditorTabs() {
   const { openTabs, activeFileId, setActiveFile, closeTab } = useEditorStore();
 
   if (openTabs.length === 0) {
-    return <div className="flex h-9 items-center border-b border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 text-[11px] text-[var(--text-tertiary)]">No file open — select a file from the explorer</div>;
+    return <div className="flex h-9 items-center border-b border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 text-[11px] text-[var(--text-tertiary)] select-none">No file open — select a file from the explorer</div>;
   }
 
   return (

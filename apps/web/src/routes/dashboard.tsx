@@ -57,7 +57,7 @@ export function DashboardPage() {
           <h1 className="text-lg font-semibold text-[var(--text-primary)]">Projects</h1>
           <p className="text-[13px] text-[var(--text-secondary)] mt-0.5">Your LaTeX documents</p>
         </div>
-        <button onClick={() => setShowNew(true)} className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-emphasis)] px-3 py-1.5 text-[13px] font-medium text-white hover:bg-[var(--accent)] transition-all">
+        <button onClick={() => setShowNew(true)} className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-emphasis)] px-3 py-1.5 text-[13px] font-medium text-white hover:bg-[var(--accent)] transition-all duration-[var(--transition-fast)] shadow-[var(--shadow-sm)]">
           <Plus className="h-3.5 w-3.5" /> New
         </button>
       </div>

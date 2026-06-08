@@ -8,7 +8,7 @@ export function LandingPage() {
         <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-1 text-[12px] text-[var(--text-secondary)] shadow-[var(--shadow-sm)]">
           <Zap className="h-3 w-3 text-[var(--warning)]" /> Real-time LaTeX compilation
         </div>
-        <h1 className="max-w-xl text-3xl font-bold tracking-tight text-[var(--text-primary)]">Write LaTeX.<br /><span className="text-[var(--accent-text)]">See it instantly.</span></h1>
+        <h1 className="max-w-xl text-3xl font-bold tracking-tight text-[var(--text-primary)]">Write LaTeX. <span className="text-[var(--accent-text)]">See it live.</span></h1>
         <p className="mt-3 max-w-md text-[14px] text-[var(--text-secondary)]">A clean, fast LaTeX editor with live PDF preview. No setup — just write and compile.</p>
         <div className="mt-6 flex gap-2">
           <Link to="/login" className="rounded-[var(--radius-sm)] bg-[var(--accent-emphasis)] px-4 py-2 text-[13px] font-medium text-white hover:bg-[var(--accent)] transition-all">Sign In</Link>

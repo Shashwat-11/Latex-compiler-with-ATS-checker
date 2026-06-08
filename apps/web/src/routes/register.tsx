@@ -13,7 +13,7 @@ export function RegisterPage() {
 
   // Redirect already-authenticated users to prevent flash
   useEffect(() => { if (isAuthenticated) navigate('/dashboard', { replace: true }); }, [isAuthenticated, navigate]);
-  const inputClass = "w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg)] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition-all";
+  const inputClass = "w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg)] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none transition-all duration-[var(--transition-fast)]";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] px-4">

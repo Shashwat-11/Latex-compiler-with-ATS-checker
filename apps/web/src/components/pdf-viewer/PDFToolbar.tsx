@@ -11,7 +11,7 @@ export function PDFToolbar({ pageNum, numPages, scale, onPageChange, onScaleChan
   const btnClass = "rounded p-0.5 text-[var(--text-secondary)] hover:bg-[var(--bg-overlay)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:cursor-not-allowed transition-all";
 
   return (
-    <div className="flex h-9 items-center justify-between border-b border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 shrink-0">
+    <div className="flex h-9 items-center justify-between border-b border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 shrink-0 select-none">
       <div className="flex items-center gap-2">
         <button onClick={() => onPageChange(Math.max(1, pageNum - 1))} disabled={pageNum <= 1} className={btnClass}><ChevronLeft className="h-4 w-4" /></button>
         <span className="text-xs text-[var(--text-secondary)] tabular-nums">{pageNum} / {numPages}</span>

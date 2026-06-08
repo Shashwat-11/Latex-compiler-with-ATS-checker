@@ -11,7 +11,7 @@ export function EditorStatusBar({ projectId, isSaving, isDirty }: Props) {
   const lines = content ? content.split('\n').length : 0;
 
   return (
-    <div className="flex h-6 items-center justify-between border-t border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 text-[11px] text-[var(--text-tertiary)] shrink-0">
+    <div className="flex h-6 items-center justify-between border-t border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 text-[11px] text-[var(--text-tertiary)] select-none shrink-0">
       <div className="flex items-center gap-3">
         {isSaving && <span className="text-[var(--accent)]">Saving...</span>}
         {isDirty && !isSaving && <span className="text-[var(--warning)]">Unsaved</span>}

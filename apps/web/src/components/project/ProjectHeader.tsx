@@ -11,8 +11,8 @@ export function ProjectHeader({ projectId, projectName, onSaveBeforeCompile }: P
   const handleCompile = () => { onSaveBeforeCompile?.(); setTimeout(() => compile(), 500); };
 
   return (
-    <header className="flex items-center justify-between h-10 px-4 border-b border-[var(--border-default)] bg-[var(--bg)] shrink-0">
-      <h2 className="text-[13px] font-medium text-[var(--text-primary)] truncate mr-4">{projectName}</h2>
+    <header className="flex items-center justify-between h-10 px-4 border-b border-[var(--border-default)] bg-[var(--bg)] shrink-0 select-none">
+      <h2 className="text-[13px] font-semibold text-[var(--text-primary)] truncate mr-4">{projectName}</h2>
       <div className="flex items-center gap-3 shrink-0 min-w-0">
         {errorLine && <span className="text-[11px] text-[var(--danger)] flex-1 min-w-0 truncate" title={errorLine}><AlertCircle className="inline h-3 w-3 mr-1" />{errorLine}</span>}
         {status === 'success' && compileTimeMs && <span className="text-[11px] text-[var(--success)] shrink-0"><CheckCircle2 className="inline h-3 w-3 mr-1" />{compileTimeMs < 1000 ? `${compileTimeMs}ms` : `${(compileTimeMs/1000).toFixed(1)}s`}</span>}
