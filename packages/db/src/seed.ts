@@ -224,13 +224,13 @@ IEEE Internet of Things Journal, vol. 3, no. 5, pp. 637--646, 2016.
 
   // Guest user project
   const guestProjectId = randomUUID();
-  await db.insert(projects).values({ id: guestProjectId, ownerId: guestUserId, name: 'My First Project', description: 'Get started with LaTeX', createdAt: new Date(), updatedAt: new Date() });
+  await db.insert(projects).values({ id: guestProjectId, ownerId: guestUserId, name: 'Quick Start', description: 'Get started with LaTeX', createdAt: new Date(), updatedAt: new Date() });
   await db.insert(projectSettings).values({ projectId: guestProjectId, compiler: 'pdflatex', autoCompile: true, createdAt: new Date(), updatedAt: new Date() });
   await db.insert(files).values({ id: randomUUID(), projectId: guestProjectId, parentId: null, name: 'main.tex', type: 'file', content: `\\documentclass[12pt,a4paper]{article}\n\n\\title{My First Document}\n\\author{Guest}\n\\date{\\today}\n\n\\begin{document}\n\\maketitle\n\n\\section{Introduction}\nStart writing your LaTeX document here!\n\n\\end{document}`, sortOrder: 0, sizeBytes: 0, createdAt: new Date(), updatedAt: new Date() });
-  console.log(`  ✅ Created guest project: My First Project`);
+  console.log(`  ✅ Created guest project: Quick Start`);
 
   console.log('');
-  console.log('🎉 Seeding complete!');
+  console.log('🌱 Seeding complete!');
 }
 
 seed()

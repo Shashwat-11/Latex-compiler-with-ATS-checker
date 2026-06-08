@@ -32,12 +32,13 @@ export function ProjectPage() {
 
   useEffect(() => { useEditorStore.getState().reset(); autoCompiled.current = false; }, [id]);
 
-  // Auto-compile on first open — wait for initial save to complete
+  // Auto-compile on first open — wait for initial render and file hydration
   useEffect(() => {
     if (!project || isLoading || autoCompiled.current) return;
-    const t = setTimeout(() => { saveNow(); setTimeout(() => { compile(); autoCompiled.current = true; }, 1000); }, 1500);
+    if (!activeFileId) return; // don't compile without an active file
+    const t = setTimeout(() => { compile(); autoCompiled.current = true; }, 2000);
     return () => clearTimeout(t);
-  }, [project, isLoading]);
+  }, [project, isLoading, activeFileId]);
 
   // Ctrl+S → save + compile
   useEffect(() => {

@@ -26,8 +26,12 @@ export function useAutoSave(
     updateFile.mutate(
       { projectId, fileId, content },
       {
-        onSuccess: () => {
-          savedRef.current = content;
+        onSuccess: (result) => {
+          // Update savedRef only after successful save
+          if (result) savedRef.current = content;
+        },
+        onError: () => {
+          // Don't update savedRef on error — keep as dirty
         },
       },
     );

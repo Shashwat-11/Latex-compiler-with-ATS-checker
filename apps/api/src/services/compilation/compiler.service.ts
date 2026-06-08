@@ -116,11 +116,14 @@ export async function compileProject(compilationId: string, projectId: string): 
       proc.stderr.on('data', (chunk) => { stderr += chunk; });
 
       proc.on('error', async (err) => {
+        const errorMessage = err.message.includes('ENOENT') 
+          ? 'Docker is not running or not installed'
+          : `Docker error: ${err.message}`;
         await db
           .update(schema.compilations)
           .set({
             status: 'error',
-            errorSummary: `Docker error: ${err.message}`,
+            errorSummary: errorMessage,
             finishedAt: new Date(),
             compileTimeMs: Date.now() - startTime,
           })
