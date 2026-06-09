@@ -66,9 +66,10 @@ function extractErrorMessage(error: unknown): { cleanMessage: string; isOverload
 
 // ─── Model Fallback ───
 
-const CHAT_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
+// Model priority: Flash-Lite first (faster, more available), then Flash, then Pro
+const CHAT_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro'];
 const COMPLETION_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
-const RESUME_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+const RESUME_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
 
 async function withModelFallback<T>(
   models: string[],
@@ -121,34 +122,57 @@ export async function* streamChatResponse(
     ? `${SYSTEM_PROMPT}\n\nCURRENT DOCUMENT CONTEXT:\n${context}`
     : SYSTEM_PROMPT;
 
-  try {
-    const stream = await withModelFallback(CHAT_MODELS, async (model) => {
-      return ai.models.generateContentStream({
+  // Track how much we've yielded so we can resume mid-stream if a model fails
+  let yieldedCount = 0;
+
+  for (let attempt = 0; attempt < CHAT_MODELS.length; attempt++) {
+    const model = CHAT_MODELS[attempt]!;
+    try {
+      const stream = await ai.models.generateContentStream({
         model,
         contents,
         config: {
-          systemInstruction,
+          systemInstruction: attempt > 0
+            ? `${systemInstruction}\n\nNote: A previous model became unavailable mid-response. Continue the response naturally.`
+            : systemInstruction,
           temperature: 0.3,
           maxOutputTokens: 4096,
         },
       });
-    });
 
-    for await (const chunk of stream) {
-      const text = chunk.text;
-      if (text) {
-        yield text;
+      for await (const chunk of stream) {
+        const text = chunk.text;
+        if (text) {
+          yieldedCount++;
+          yield text;
+        }
       }
+      // If we get here, the stream completed successfully
+      return;
+    } catch (error: any) {
+      const { cleanMessage, isOverloaded } = extractErrorMessage(error);
+
+      // Non-recoverable errors — throw immediately
+      if (cleanMessage.includes('API_KEY') || cleanMessage.includes('API key')) {
+        throw new Error('AI service: Invalid or missing API key. Check your GEMINI_API_KEY.');
+      }
+      if (!isOverloaded) {
+        throw new Error(`AI service: ${cleanMessage}`);
+      }
+
+      // Overloaded — if we already yielded content, inform the user
+      if (yieldedCount > 0) {
+        yield `\n\n*[The response was interrupted because the AI model became temporarily unavailable. ${attempt < CHAT_MODELS.length - 1 ? 'Trying a fallback model...' : 'Please try again later.'}]*\n\n`;
+      }
+
+      // If this was the last model, throw
+      if (attempt >= CHAT_MODELS.length - 1) {
+        throw new Error('AI service is temporarily busy. Response was partially delivered. Please try again.');
+      }
+
+      // Otherwise: wait briefly, then loop to try the next model
+      await new Promise((r) => setTimeout(r, 800));
     }
-  } catch (error: any) {
-    const { cleanMessage, isOverloaded } = extractErrorMessage(error);
-    if (cleanMessage.includes('API_KEY') || cleanMessage.includes('API key')) {
-      throw new Error('AI service: Invalid or missing API key. Check your GEMINI_API_KEY.');
-    }
-    if (isOverloaded) {
-      throw new Error('AI service is temporarily busy. Please try again in a few moments.');
-    }
-    throw new Error(`AI service: ${cleanMessage}`);
   }
 }
 
