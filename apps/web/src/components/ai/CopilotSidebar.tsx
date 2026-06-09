@@ -194,7 +194,7 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
   if (!isOpen) return null;
 
   return (
-    <div className="flex flex-col h-full w-[340px] border-l border-[var(--border-default)] bg-[var(--bg)]">
+    <div className="flex flex-col h-full border-l border-[var(--border-default)] bg-[var(--bg)]">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--border-default)] shrink-0">
         <div className="flex items-center gap-2">
@@ -246,7 +246,7 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
           </div>
         ))}
         {error && (
-          <div className="rounded-[var(--radius-sm)] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2 text-[12px] text-red-700 dark:text-red-400">
+          <div className="rounded-[var(--radius-sm)] bg-[var(--danger-muted)] border border-[var(--danger)] px-3 py-2 text-[12px] text-[var(--danger)]">
             {error}
           </div>
         )}

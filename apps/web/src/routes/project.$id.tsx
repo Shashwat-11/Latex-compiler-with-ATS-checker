@@ -55,7 +55,7 @@ export function ProjectPage() {
   }, [saveNow, compile]);
 
   if (isLoading) return <div className="flex h-full items-center justify-center"><Spinner /></div>;
-  if (!project || !id) return <div className="flex h-full items-center justify-center text-[var(--text-muted)]">Project not found</div>;
+  if (!project || !id) return <div className="flex h-full items-center justify-center text-[var(--text-tertiary)]">Project not found</div>;
 
   return (
     <div className="flex flex-col h-full">
@@ -68,45 +68,52 @@ export function ProjectPage() {
       />
 
       <div className="flex flex-1 min-h-0">
-        <Group orientation="horizontal" id="overleaf-editor-layout" style={{ height: '100%' }}>
-          <Panel defaultSize="15" minSize="12" maxSize="25">
-            <div className="h-full border-r border-[var(--border)]">
-              <FileExplorer projectId={id} />
-            </div>
-          </Panel>
-          <Separator className="w-1 bg-[var(--border)] hover:bg-[var(--accent)] transition-colors cursor-col-resize" />
-          <Panel defaultSize="45" minSize="25">
-            <div className="flex flex-col h-full min-w-0">
-              <EditorTabs />
-              <div className="flex-1 min-h-0">
-                {activeFileId && activeContent !== undefined ? (
-                  <CodeEditor key={activeFileId} fileId={activeFileId} initialContent={activeContent} />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-muted)]">Select a file to edit</div>
-                )}
-              </div>
-              <EditorStatusBar projectId={id} isSaving={isSaving} isDirty={isDirty} />
-            </div>
-          </Panel>
-          <Separator className="w-1 bg-[var(--border)] hover:bg-[var(--accent)] transition-colors cursor-col-resize" />
-          {aiSidebarOpen ? (
-            <Panel defaultSize="35" minSize="25" maxSize="50">
-              <CopilotSidebar
-                projectId={id}
-                currentFileId={activeFileId ?? undefined}
-                isOpen={aiSidebarOpen}
-                onToggle={() => setAiSidebarOpen(false)}
-              />
-            </Panel>
-          ) : (
-            <Panel defaultSize="40" minSize="20">
-              <div className="h-full border-l border-[var(--border)] flex flex-col min-h-0">
-                <div className="flex-1 min-h-0">
-                  <PDFViewer />
+        <Group orientation="vertical" id="overleaf-main-layout" style={{ height: '100%' }}>
+          <Panel defaultSize={aiSidebarOpen ? 75 : 100} minSize={30}>
+            <Group orientation="horizontal" id="overleaf-editor-layout" style={{ height: '100%' }}>
+              <Panel defaultSize="15" minSize="12" maxSize="25">
+                <div className="h-full border-r border-[var(--border-default)]">
+                  <FileExplorer projectId={id} />
                 </div>
-                <AtsPanel projectId={id} />
-              </div>
-            </Panel>
+              </Panel>
+              <Separator className="w-1 bg-[var(--border-default)] hover:bg-[var(--accent)] transition-colors cursor-col-resize" />
+              <Panel defaultSize="45" minSize="25">
+                <div className="flex flex-col h-full min-w-0">
+                  <EditorTabs />
+                  <div className="flex-1 min-h-0">
+                    {activeFileId && activeContent !== undefined ? (
+                      <CodeEditor key={activeFileId} fileId={activeFileId} initialContent={activeContent} />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-tertiary)]">Select a file to edit</div>
+                    )}
+                  </div>
+                  <EditorStatusBar projectId={id} isSaving={isSaving} isDirty={isDirty} />
+                </div>
+              </Panel>
+              <Separator className="w-1 bg-[var(--border-default)] hover:bg-[var(--accent)] transition-colors cursor-col-resize" />
+              <Panel defaultSize="40" minSize="20">
+                <div className="h-full border-l border-[var(--border-default)] flex flex-col min-h-0">
+                  <div className="flex-1 min-h-0">
+                    <PDFViewer />
+                  </div>
+                  <AtsPanel projectId={id} />
+                </div>
+              </Panel>
+            </Group>
+          </Panel>
+
+          {aiSidebarOpen && (
+            <>
+              <Separator className="h-1 bg-[var(--border-default)] hover:bg-[var(--accent)] transition-colors cursor-row-resize" />
+              <Panel defaultSize={25} minSize={15} maxSize={50}>
+                <CopilotSidebar
+                  projectId={id}
+                  currentFileId={activeFileId ?? undefined}
+                  isOpen={aiSidebarOpen}
+                  onToggle={() => setAiSidebarOpen(false)}
+                />
+              </Panel>
+            </>
           )}
         </Group>
       </div>

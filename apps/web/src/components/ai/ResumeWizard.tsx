@@ -479,7 +479,7 @@ function StepGenerate({ form }: { form: FormData }) {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-[var(--radius-sm)] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-[12px] text-red-700 dark:text-red-400">
+        <div className="mb-4 p-3 rounded-[var(--radius-sm)] bg-[var(--danger-muted)] border border-[var(--danger)] text-[12px] text-[var(--danger)]">
           {error}
         </div>
       )}

@@ -9,13 +9,13 @@
 }
 
 /* LaTeX syntax token colors */
-.mtk.keyword.tex  { color: #c678dd !important; }
-.mtk.command.tex  { color: #61afef !important; }
-.mtk.bracket.tex  { color: #e5c07b !important; }
-.mtk.comment.tex  { color: #5c6370 !important; }
+.mtk.keyword.tex  { color: #83a598 !important; }
+.mtk.command.tex  { color: #83a598 !important; }
+.mtk.bracket.tex  { color: #fabd2f !important; }
+.mtk.comment.tex  { color: #665c54 !important; }
 
 .cm-editor .cm-matchingBracket { background-color: var(--accent-light); border-radius: 2px; }
-.cm-editor .cm-nonmatchingBracket { background-color: var(--red-light); border-radius: 2px; }
+.cm-editor .cm-nonmatchingBracket { background-color: var(--danger); border-radius: 2px; }
 
 /* PDF fade */
 @keyframes pdfFadeIn { from { opacity: 0; } to { opacity: 1; } }
