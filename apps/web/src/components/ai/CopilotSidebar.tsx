@@ -76,15 +76,13 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
   // Track which file actions we've already executed (by filename) to avoid duplicates
   const executedActions = useRef<Set<string>>(new Set());
 
-  // Execute file actions from assistant messages — only when streaming is done
+  // Execute file actions from assistant messages — when streaming is done
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     if (!lastMsg || lastMsg.role !== 'assistant' || lastMsg.id.startsWith('temp-')) return;
-    // Only process when streaming is complete (no longer loading)
+    // Only process when streaming is complete (no longer loading) or there's an error
     if (isLoading) return;
     if (!lastMsg.content.includes('[CREATE_FILE') && !lastMsg.content.includes('[EDIT_FILE')) return;
-    // Use a marker to check this is the final complete message
-    if (!lastMsg.content.endsWith('"') && !lastMsg.content.endsWith('`') && !lastMsg.content.endsWith('\n') && !lastMsg.content.endsWith('.')) return;
 
     const actions = parseFileActions(lastMsg.content);
     if (actions.length === 0) return;
