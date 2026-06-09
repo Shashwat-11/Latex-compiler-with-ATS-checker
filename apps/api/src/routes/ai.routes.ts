@@ -98,6 +98,7 @@ export async function aiRoutes(app: FastifyInstance) {
     const { message, contextFileId, contextSelection } = parsed.data;
     const userId = request.user.id;
     const { projectId } = request.params as { projectId: string };
+    const userApiKey = (request.headers as any)['x-gemini-key'] as string | undefined;
 
     // Get or create conversation (scoped to user + project)
     const existingConv = await db.query.aiConversations.findFirst({
@@ -183,7 +184,7 @@ export async function aiRoutes(app: FastifyInstance) {
     let fullResponse = '';
 
     try {
-      for await (const chunk of streamChatResponse(messages, projectContext)) {
+      for await (const chunk of streamChatResponse(messages, projectContext, userApiKey)) {
         fullResponse += chunk;
         reply.raw.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
       }
@@ -256,9 +257,10 @@ export async function aiRoutes(app: FastifyInstance) {
       return sendZodError(reply, parsed.error);
     }
     const { prefix, suffix } = parsed.data;
+    const userApiKey = (request.headers as any)['x-gemini-key'] as string | undefined;
 
     try {
-      const completions = await getInlineCompletions(prefix, suffix);
+      const completions = await getInlineCompletions(prefix, suffix, userApiKey);
       return reply.send({ completions });
     } catch (error: any) {
       return reply.status(500).send({

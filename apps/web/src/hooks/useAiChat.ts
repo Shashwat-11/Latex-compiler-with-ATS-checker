@@ -10,9 +10,10 @@ export interface ChatMessage {
 
 interface UseAiChatOptions {
   projectId: string;
+  geminiApiKey?: string;
 }
 
-export function useAiChat({ projectId }: UseAiChatOptions) {
+export function useAiChat({ projectId, geminiApiKey }: UseAiChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,9 +52,12 @@ export function useAiChat({ projectId }: UseAiChatOptions) {
     abortRef.current = new AbortController();
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (geminiApiKey) headers['X-Gemini-Key'] = geminiApiKey;
+
       const response = await fetch(`/api/v1/projects/${projectId}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ message, contextFileId, contextSelection }),
         signal: abortRef.current.signal,

@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, X, Loader2, StopCircle, MessageSquare, Sparkles, CheckCircle, FileEdit } from 'lucide-react';
+import { Send, Bot, User, X, Loader2, StopCircle, MessageSquare, Sparkles, CheckCircle, FileEdit, Key } from 'lucide-react';
 import { useAiChat } from '../../hooks/useAiChat.js';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api.js';
 import { useEditorStore } from '../../stores/editor.store.js';
+import { useUIStore } from '../../stores/ui.store.js';
 import type { ChatMessage } from '../../hooks/useAiChat.js';
 
 interface FileAction {
@@ -66,12 +67,16 @@ function parseFileActions(content: string): FileAction[] {
 
 export function CopilotSidebar({ projectId, currentFileId, currentSelection, isOpen, onToggle }: Props) {
   const [input, setInput] = useState('');
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [keyInputValue, setKeyInputValue] = useState('');
   const [fileChanges, setFileChanges] = useState<Array<{ file: string; type: string; status: 'pending' | 'done' | 'error'; time: Date }>>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedMessages = useRef<Set<string>>(new Set());
   const queryClient = useQueryClient();
-  const { messages, isLoading, error, sendMessage, stopGeneration, clearMessages, loadHistory } = useAiChat({ projectId });
+  const geminiApiKey = useUIStore((s) => s.geminiApiKey);
+  const setGeminiApiKey = useUIStore((s) => s.setGeminiApiKey);
+  const { messages, isLoading, error, sendMessage, stopGeneration, clearMessages, loadHistory } = useAiChat({ projectId, geminiApiKey: geminiApiKey || undefined });
 
   // Track which file actions we've already executed (by filename) to avoid duplicates
   const executedActions = useRef<Set<string>>(new Set());
@@ -208,8 +213,18 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-[var(--accent)]" />
           <span className="text-[13px] font-semibold text-[var(--text-primary)]">AI Copilot</span>
+          {!geminiApiKey && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--warning-muted)] text-[var(--warning)]">No API key</span>
+          )}
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowKeyInput(!showKeyInput)}
+            className="rounded-[var(--radius-sm)] p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-overlay)] transition-all"
+            title="Configure API key"
+          >
+            <Key className="h-3.5 w-3.5" />
+          </button>
           <button
             onClick={clearMessages}
             className="rounded-[var(--radius-sm)] p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-overlay)] transition-all"
@@ -226,6 +241,48 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
           </button>
         </div>
       </div>
+
+      {/* API Key Input */}
+      {showKeyInput && (
+        <div className="shrink-0 px-3 py-2 border-b border-[var(--border-muted)] bg-[var(--bg-overlay)]">
+          <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">
+            Gemini API Key
+          </label>
+          <div className="flex gap-1.5">
+            <input
+              type="password"
+              value={keyInputValue || geminiApiKey}
+              onChange={(e) => setKeyInputValue(e.target.value)}
+              placeholder="Enter your Gemini API key..."
+              className="flex-1 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg)] px-2 py-1.5 text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] outline-none focus:border-[var(--accent)]"
+            />
+            <button
+              onClick={() => {
+                if (keyInputValue) {
+                  setGeminiApiKey(keyInputValue);
+                  setKeyInputValue('');
+                  setShowKeyInput(false);
+                }
+              }}
+              disabled={!keyInputValue}
+              className="rounded-[var(--radius-sm)] bg-[var(--accent-emphasis)] px-2.5 py-1.5 text-[12px] text-white hover:bg-[var(--accent)] disabled:opacity-50 transition-all"
+            >
+              Save
+            </button>
+            {geminiApiKey && (
+              <button
+                onClick={() => { setGeminiApiKey(''); setKeyInputValue(''); }}
+                className="rounded-[var(--radius-sm)] border border-[var(--border-default)] px-2.5 py-1.5 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--danger)] transition-all"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <p className="mt-1 text-[10px] text-[var(--text-tertiary)]">
+            Get a free key at <span className="text-[var(--accent-text)]">aistudio.google.com</span> — stored locally in your browser.
+          </p>
+        </div>
+      )}
 
       {/* File Changes */}
       {fileChanges.length > 0 && (

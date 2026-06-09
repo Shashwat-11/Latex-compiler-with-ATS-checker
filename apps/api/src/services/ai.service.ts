@@ -28,13 +28,17 @@ RULES:
 7. Use proper LaTeX math syntax with $...$ or $$...$$.`;
 
 let client: GoogleGenAI | null = null;
+let currentKey: string | undefined;
 
-function getClient(): GoogleGenAI {
-  if (!client) {
-    if (!env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
-    }
-    client = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+function getClient(userApiKey?: string): GoogleGenAI {
+  const activeKey = userApiKey || env.GEMINI_API_KEY;
+  if (!activeKey) {
+    throw new Error('No Gemini API key provided. Set GEMINI_API_KEY in .env or provide your own.');
+  }
+  // Re-create client if the key changed (user-provided key vs env var)
+  if (!client || activeKey !== currentKey) {
+    client = new GoogleGenAI({ apiKey: activeKey });
+    currentKey = activeKey;
   }
   return client;
 }
@@ -116,8 +120,9 @@ export interface CompletionResult {
 export async function* streamChatResponse(
   messages: ChatMessage[],
   context?: string,
+  userApiKey?: string,
 ): AsyncGenerator<string, void, unknown> {
-  const ai = getClient();
+  const ai = getClient(userApiKey);
 
   const contents = messages.map((m) => ({
     role: m.role === 'assistant' ? 'model' : m.role,
@@ -185,8 +190,9 @@ export async function* streamChatResponse(
 export async function getInlineCompletions(
   prefix: string,
   suffix: string,
+  userApiKey?: string,
 ): Promise<string[]> {
-  const ai = getClient();
+  const ai = getClient(userApiKey);
 
   const prompt = `You are a LaTeX code completion engine. Complete the LaTeX code at the cursor position marked by [CURSOR].
 Return ONLY the completion text, no explanations.
@@ -236,8 +242,9 @@ export async function generateResumeLatex(
   userData: Record<string, any>,
   style?: string,
   color?: string,
+  userApiKey?: string,
 ): Promise<string> {
-  const ai = getClient();
+  const ai = getClient(userApiKey);
 
   let latex = templateLatex
     .replace(/%%FIRSTNAME%%/g, userData.personalInfo?.firstName || '')

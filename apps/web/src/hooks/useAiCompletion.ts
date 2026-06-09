@@ -4,9 +4,10 @@ import api from '../lib/api.js';
 interface UseAiCompletionOptions {
   projectId: string;
   debounceMs?: number;
+  geminiApiKey?: string;
 }
 
-export function useAiCompletion({ projectId, debounceMs = 500 }: UseAiCompletionOptions) {
+export function useAiCompletion({ projectId, debounceMs = 500, geminiApiKey }: UseAiCompletionOptions) {
   const [completions, setCompletions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -20,11 +21,12 @@ export function useAiCompletion({ projectId, debounceMs = 500 }: UseAiCompletion
 
     setIsLoading(true);
     try {
+      const config = geminiApiKey ? { headers: { 'X-Gemini-Key': geminiApiKey } } : {};
       const { data } = await api.post(`/projects/${projectId}/completions`, {
         prefix,
         suffix,
         language: 'latex',
-      });
+      }, config);
       setCompletions(data.completions || []);
     } catch {
       setCompletions([]);
