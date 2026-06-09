@@ -1,7 +1,15 @@
-import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, X, Loader2, StopCircle, MessageSquare, Sparkles } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, Bot, User, X, Loader2, StopCircle, MessageSquare, Sparkles, CheckCircle } from 'lucide-react';
 import { useAiChat } from '../../hooks/useAiChat.js';
+import { useQueryClient } from '@tanstack/react-query';
+import api from '../../lib/api.js';
 import type { ChatMessage } from '../../hooks/useAiChat.js';
+
+interface FileAction {
+  type: 'create' | 'edit';
+  filename: string;
+  content: string;
+}
 
 interface Props {
   projectId: string;
@@ -41,11 +49,83 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   );
 }
 
+function parseFileActions(content: string): FileAction[] {
+  const actions: FileAction[] = [];
+  const regex = /\[(CREATE_FILE|EDIT_FILE):\s*([^\]]+)\]\s*```latex?\s*([\s\S]*?)```/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    actions.push({
+      type: match[1] === 'CREATE_FILE' ? 'create' : 'edit',
+      filename: match[2]!.trim(),
+      content: match[3]!.trim(),
+    });
+  }
+  return actions;
+}
+
 export function CopilotSidebar({ projectId, currentFileId, currentSelection, isOpen, onToggle }: Props) {
   const [input, setInput] = useState('');
+  const [fileActions, setFileActions] = useState<Array<{ msg: string; status: 'pending' | 'done' | 'error' }>>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const processedMessages = useRef<Set<string>>(new Set());
+  const queryClient = useQueryClient();
   const { messages, isLoading, error, sendMessage, stopGeneration, clearMessages, loadHistory } = useAiChat({ projectId });
+
+  // Execute file actions from completed assistant messages
+  useEffect(() => {
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg || lastMsg.role !== 'assistant' || lastMsg.id.startsWith('temp-') || processedMessages.current.has(lastMsg.id)) return;
+
+    processedMessages.current.add(lastMsg.id);
+    const actions = parseFileActions(lastMsg.content);
+
+    for (const action of actions) {
+      const actionKey = `${action.type}-${action.filename}-${Date.now()}`;
+      setFileActions((prev) => [...prev, { msg: `${action.type === 'create' ? 'Creating' : 'Editing'} ${action.filename}...`, status: 'pending' }]);
+
+      (async () => {
+        try {
+          if (action.type === 'create') {
+            await api.post(`/projects/${projectId}/files`, {
+              name: action.filename,
+              type: 'file',
+              content: action.content,
+            });
+          } else {
+            // Find file by name to get its ID
+            const { data } = await api.get(`/projects/${projectId}/files`);
+            const files = data?.files || data?.data || [];
+            const targetFile = files.find((f: any) => f.name === action.filename);
+            if (targetFile) {
+              await api.patch(`/projects/${projectId}/files/${targetFile.id}`, {
+                content: action.content,
+              });
+            } else {
+              // File doesn't exist yet, create it
+              await api.post(`/projects/${projectId}/files`, {
+                name: action.filename,
+                type: 'file',
+                content: action.content,
+              });
+            }
+          }
+          setFileActions((prev) => [
+            ...prev.slice(0, -1),
+            { msg: `✅ ${action.type === 'create' ? 'Created' : 'Edited'} ${action.filename}`, status: 'done' },
+          ]);
+          // Invalidate file tree query to refresh the file explorer
+          queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'files'] });
+        } catch (err: any) {
+          const errMsg = err?.response?.data?.error?.message || err.message;
+          setFileActions((prev) => [
+            ...prev.slice(0, -1),
+            { msg: `❌ Failed to ${action.type} ${action.filename}: ${errMsg}`, status: 'error' },
+          ]);
+        }
+      })();
+    }
+  }, [messages, projectId, queryClient]);
 
   useEffect(() => {
     if (isOpen) {
@@ -55,7 +135,7 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, fileActions]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -118,6 +198,18 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
         )}
         {messages.map((msg) => (
           <MessageBubble key={msg.id} message={msg} />
+        ))}
+        {fileActions.map((fa, i) => (
+          <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-sm)] text-[12px] ${
+            fa.status === 'done' ? 'text-[var(--success)]' :
+            fa.status === 'error' ? 'text-[var(--danger)]' :
+            'text-[var(--text-tertiary)]'
+          }`}>
+            {fa.status === 'pending' ? <Loader2 className="h-3 w-3 animate-spin" /> :
+             fa.status === 'done' ? <CheckCircle className="h-3 w-3" /> :
+             <X className="h-3 w-3" />}
+            {fa.msg}
+          </div>
         ))}
         {error && (
           <div className="rounded-[var(--radius-sm)] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2 text-[12px] text-red-700 dark:text-red-400">

@@ -130,17 +130,37 @@ export async function aiRoutes(app: FastifyInstance) {
       limit: 20,
     });
 
-    // Fetch current document content if contextFileId is provided
-    let documentContext: string | undefined;
+    // Build project context: file tree + current file content
+    const allFiles = await db.query.files.findMany({
+      where: eq(schema.files.projectId, projectId),
+      orderBy: [schema.files.sortOrder],
+    });
+
+    // Build file tree listing
+    const fileTreeLines = allFiles
+      .filter((f) => f.type === 'file')
+      .map((f) => `  - ${f.name}${f.parentId ? ` (in folder)` : ''}`)
+      .join('\n');
+
+    let projectContext = `PROJECT FILE TREE:\n${fileTreeLines || '  (no files yet)'}\n`;
+
+    // Add current file content if contextFileId is provided
     if (contextFileId) {
       const file = await db.query.files.findFirst({
         where: eq(schema.files.id, contextFileId),
       });
-      if (file?.content) {
-        documentContext = file.content;
-        if (contextSelection) {
-          documentContext = `SELECTED TEXT (lines ${contextSelection}):\n${contextSelection}\n\nFULL FILE:\n${file.content}`;
+      if (file) {
+        projectContext += `\nCURRENTLY OPEN FILE: ${file.name}\n`;
+        if (file.content) {
+          const contentPreview = contextSelection || file.content;
+          projectContext += `FILE CONTENT:\n\`\`\`latex\n${contentPreview}\n\`\`\`\n`;
         }
+      }
+    } else {
+      // No specific file selected — include first main file content
+      const mainFile = allFiles.find((f) => f.name === 'main.tex' && f.content);
+      if (mainFile?.content) {
+        projectContext += `\nMAIN FILE (main.tex) CONTENT:\n\`\`\`latex\n${mainFile.content.slice(0, 2000)}\n\`\`\`\n`;
       }
     }
 
@@ -160,7 +180,7 @@ export async function aiRoutes(app: FastifyInstance) {
     let fullResponse = '';
 
     try {
-      for await (const chunk of streamChatResponse(messages, documentContext)) {
+      for await (const chunk of streamChatResponse(messages, projectContext)) {
         fullResponse += chunk;
         reply.raw.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
       }
