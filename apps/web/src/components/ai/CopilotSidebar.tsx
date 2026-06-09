@@ -3,6 +3,7 @@ import { Send, Bot, User, X, Loader2, StopCircle, MessageSquare, Sparkles, Check
 import { useAiChat } from '../../hooks/useAiChat.js';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api.js';
+import { useEditorStore } from '../../stores/editor.store.js';
 import type { ChatMessage } from '../../hooks/useAiChat.js';
 
 interface FileAction {
@@ -91,36 +92,64 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
 
       (async () => {
         try {
+          const editorStore = useEditorStore.getState();
+          let fileId: string | null = null;
+
           if (action.type === 'create') {
-            await api.post(`/projects/${projectId}/files`, {
+            const res = await api.post(`/projects/${projectId}/files`, {
               name: action.filename,
               type: 'file',
               content: action.content,
             });
+            // Try to get file ID from response (different shapes from different APIs)
+            fileId = res.data?.id || res.data?.file?.id || null;
+            // Open the new file in the editor
+            if (fileId) {
+              editorStore.openFile(fileId, action.filename, action.content);
+              editorStore.markClean(fileId);
+            }
           } else {
             // Find file by name to get its ID
             const { data } = await api.get(`/projects/${projectId}/files`);
-            const files = data?.files || data?.data || [];
-            const targetFile = files.find((f: any) => f.name === action.filename);
+            const files = data?.files || data?.data || data || [];
+            const targetFile = Array.isArray(files) ? files.find((f: any) => f.name === action.filename) : null;
+
             if (targetFile) {
-              await api.patch(`/projects/${projectId}/files/${targetFile.id}`, {
+              fileId = targetFile.id;
+              await api.patch(`/projects/${projectId}/files/${fileId}`, {
                 content: action.content,
               });
             } else {
               // File doesn't exist yet, create it
-              await api.post(`/projects/${projectId}/files`, {
+              const res = await api.post(`/projects/${projectId}/files`, {
                 name: action.filename,
                 type: 'file',
                 content: action.content,
               });
+              fileId = res.data?.id || res.data?.file?.id || null;
+            }
+
+            // Update the editor content immediately so it reflects in the editor
+            if (fileId) {
+              editorStore.updateContent(fileId, action.content);
+              // Opening forces a refresh if the file is not already open
+              if (!editorStore.openTabs.find((t) => t.fileId === fileId)) {
+                editorStore.openFile(fileId, action.filename, action.content);
+              }
+              editorStore.markClean(fileId);
             }
           }
+
           setFileActions((prev) => [
             ...prev.slice(0, -1),
             { msg: `✅ ${action.type === 'create' ? 'Created' : 'Edited'} ${action.filename}`, status: 'done' },
           ]);
           // Invalidate file tree query to refresh the file explorer
           queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'files'] });
+          // Force a refetch of the file content query if cached
+          if (fileId) {
+            queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'files', fileId] });
+          }
         } catch (err: any) {
           const errMsg = err?.response?.data?.error?.message || err.message;
           setFileActions((prev) => [
