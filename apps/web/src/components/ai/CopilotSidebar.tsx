@@ -72,12 +72,17 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
   const queryClient = useQueryClient();
   const { messages, isLoading, error, sendMessage, stopGeneration, clearMessages, loadHistory } = useAiChat({ projectId });
 
-  // Execute file actions from completed assistant messages
+  // Execute file actions from assistant messages (only when content includes markers)
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
-    if (!lastMsg || lastMsg.role !== 'assistant' || lastMsg.id.startsWith('temp-') || processedMessages.current.has(lastMsg.id)) return;
+    if (!lastMsg || lastMsg.role !== 'assistant' || lastMsg.id.startsWith('temp-')) return;
+    if (!lastMsg.content.includes('[CREATE_FILE') && !lastMsg.content.includes('[EDIT_FILE')) return;
 
-    processedMessages.current.add(lastMsg.id);
+    // Use content hash to avoid re-processing the same content
+    const contentHash = lastMsg.content.length + '-' + lastMsg.content.slice(-50);
+    if (processedMessages.current.has(contentHash)) return;
+
+    processedMessages.current.add(contentHash);
     const actions = parseFileActions(lastMsg.content);
 
     for (const action of actions) {
