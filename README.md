@@ -19,6 +19,7 @@ A modern, feature-rich LaTeX editor with **AI-powered copilot**, **one-click res
 - **Create & edit files** — Just ask: *"Create a file called report.tex"* or *"Add a section to main.tex"*
 - **Inline completions** — AI suggests LaTeX code as you type
 - **Project-aware** — The AI sees your file tree and current document context
+- **Bring your own API key** — Enter your Gemini key in the UI (🔑 button), stored locally
 - File Changes panel shows what files were created/edited
 
 ### 📄 Resume Wizard
@@ -81,7 +82,11 @@ Key variables to configure:
 | `GEMINI_API_KEY` | Google Gemini API key | _(get one free at [aistudio.google.com](https://aistudio.google.com))_ |
 | `CORS_ORIGIN` | Frontend URL for CORS | `http://localhost:5173` |
 
-> **Note**: AI features require `GEMINI_API_KEY`. Without it, the editor and compilation still work — only the AI Copilot and Resume Wizard will be unavailable.
+> **Note**: AI features need a Gemini API key. You have two options:
+> 1. **Server-level** (all users): Set `GEMINI_API_KEY` in `.env`
+> 2. **Per-user** (no server key needed): Each user can enter their own key in the Copilot sidebar (click the 🔑 icon) — it's saved in their browser's localStorage
+>
+> Get a free key at [aistudio.google.com](https://aistudio.google.com). Without a key, the editor and compilation still work — only the AI Copilot and Resume Wizard are unavailable.
 
 ### 3. Start PostgreSQL
 
@@ -132,7 +137,9 @@ Visit **http://localhost:5173** and log in with `demo@overleaf.local` / `passwor
 
 ## 🤖 Using the AI Copilot
 
-> **Requires**: `GEMINI_API_KEY` set in `.env`
+### Setup
+- **Server has a key** (set `GEMINI_API_KEY` in `.env`): Just open the Copilot — it works automatically
+- **No server key**: Click the 🔑 icon in the Copilot header, paste your Gemini API key, and click Save. The key is stored in your browser's localStorage and sent with every AI request. The server never stores it.
 
 ### Chat Assistant
 1. Open any project
