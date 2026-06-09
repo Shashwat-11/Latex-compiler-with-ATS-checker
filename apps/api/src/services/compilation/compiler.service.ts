@@ -85,121 +85,167 @@ export async function compileProject(compilationId: string, projectId: string): 
       await writeFile(join(workDir, '.latexmkrc'), '$bibtex = "biber";\n', 'utf8');
     }
 
-    // Run latexmk inside Docker (sandboxed texlive)
+    // Run latexmk — try Docker first (local dev), fall back to direct (Fly.io)
     const pdfPath = join(workDir, 'output.pdf');
     const logPath = join(workDir, 'output.log');
-    // Ensure the workdir has proper permissions for Docker user namespace
 
-    await new Promise<void>((resolve, reject) => {
-      const latexCmd =
-        `cd /workspace && TEXFILE=$(ls *.tex 2>/dev/null | head -1) && latexmk -pdf -interaction=nonstopmode -halt-on-error -jobname=output "$TEXFILE"`;
-      
-      const dockerArgs = [
-        'run', '--rm',
-        '--network', 'none',
-        '--memory', `${env.LATEX_MAX_MEMORY_MB}m`,
-        '--stop-timeout', String(env.LATEX_TIMEOUT_SECONDS),
-        '--entrypoint', 'sh',
-        '-v', `${workDir}:/workspace:rw`,
-        env.LATEX_DOCKER_IMAGE,
-        '-c', latexCmd,
-      ];
+    async function runLatexmk(): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+      return new Promise((resolve, reject) => {
+        // Check if Docker is available
+        const hasDocker = env.NODE_ENV !== 'production' && process.env.SKIP_DOCKER !== 'true';
+        
+        let cmd: string;
+        let args: string[];
 
-      const proc = spawn('docker', dockerArgs, {
-        timeout: (env.LATEX_TIMEOUT_SECONDS + 10) * 1000,
-      });
-
-      let stdout = '';
-      let stderr = '';
-
-      proc.stdout.on('data', (chunk) => { stdout += chunk; });
-      proc.stderr.on('data', (chunk) => { stderr += chunk; });
-
-      proc.on('error', async (err) => {
-        const errorMessage = err.message.includes('ENOENT') 
-          ? 'Docker is not running or not installed'
-          : `Docker error: ${err.message}`;
-        await db
-          .update(schema.compilations)
-          .set({
-            status: 'error',
-            errorSummary: errorMessage,
-            finishedAt: new Date(),
-            compileTimeMs: Date.now() - startTime,
-          })
-          .where(eq(schema.compilations.id, compilationId));
-        reject(err);
-      });
-
-      proc.on('close', async (exitCode) => {
-        // Read log output
-        let logOutput = '';
-        try {
-          logOutput = await readFile(logPath, 'utf8');
-        } catch {
-          logOutput = stdout + '\n' + stderr;
+        if (hasDocker) {
+          // Docker sandbox (local development)
+          const latexCmd =
+            `cd /workspace && TEXFILE=$(ls *.tex 2>/dev/null | head -1) && latexmk -pdf -interaction=nonstopmode -halt-on-error -jobname=output "$TEXFILE"`;
+          cmd = 'docker';
+          args = [
+            'run', '--rm',
+            '--network', 'none',
+            '--memory', `${env.LATEX_MAX_MEMORY_MB}m`,
+            '--stop-timeout', String(env.LATEX_TIMEOUT_SECONDS),
+            '--entrypoint', 'sh',
+            '-v', `${workDir}:/workspace:rw`,
+            env.LATEX_DOCKER_IMAGE,
+            '-c', latexCmd,
+          ];
+        } else {
+          // Direct compilation (Fly.io / production Docker image has texlive)
+          const texFile = Array.from(files.keys()).find((f) => f.endsWith('.tex')) || 'main.tex';
+          cmd = 'latexmk';
+          args = [
+            '-pdf',
+            '-interaction=nonstopmode',
+            '-halt-on-error',
+            '-jobname=output',
+            texFile,
+          ];
         }
 
-        const hasPdf = await readFile(pdfPath).then(() => true).catch(() => false);
+        const proc = spawn(cmd, args, {
+          timeout: (env.LATEX_TIMEOUT_SECONDS + 10) * 1000,
+          cwd: workDir,
+          env: hasDocker ? undefined : { ...process.env, HOME: workDir },
+        });
 
-        if (exitCode !== 0 || !hasPdf) {
-          const errorLines = logOutput
-            .split('\n')
-            .filter((l) => l.startsWith('!'))
-            .slice(0, 20)
-            .join('\n');
+        let stdout = '';
+        let stderr = '';
 
-          await db
-            .update(schema.compilations)
-            .set({
-              status: 'error',
-              logOutput,
-              errorSummary: errorLines || 'Compilation failed - check LaTeX syntax',
-              finishedAt: new Date(),
-              compileTimeMs: Date.now() - startTime,
-            })
-            .where(eq(schema.compilations.id, compilationId));
-          reject(new Error('Compilation failed'));
-          return;
-        }
+        proc.stdout.on('data', (chunk) => { stdout += chunk; });
+        proc.stderr.on('data', (chunk) => { stderr += chunk; });
 
-        try {
-          // Move PDF to persistent storage
-          const storageDir = join(env.PDF_STORAGE_PATH, projectId);
-          await mkdir(storageDir, { recursive: true });
-          const destPath = join(storageDir, `${compilationId}.pdf`);
-          
-          const pdfBuffer = await readFile(pdfPath);
-          await writeFile(destPath, pdfBuffer);
-
-          await db
-            .update(schema.compilations)
-            .set({
-              status: 'success',
-              logOutput,
-              pdfPath: destPath,
-              pdfSizeBytes: pdfBuffer.length,
-              finishedAt: new Date(),
-              compileTimeMs: Date.now() - startTime,
-            })
-            .where(eq(schema.compilations.id, compilationId));
-
-          resolve();
-        } catch (err) {
-          await db
-            .update(schema.compilations)
-            .set({
-              status: 'error',
-              logOutput,
-              errorSummary: 'Failed to read PDF output',
-              finishedAt: new Date(),
-              compileTimeMs: Date.now() - startTime,
-            })
-            .where(eq(schema.compilations.id, compilationId));
+        proc.on('error', async (err) => {
+          if (hasDocker && err.message.includes('ENOENT')) {
+            // Docker not available, retry with direct compilation
+            resolve(runLatexmkDirect());
+            return;
+          }
           reject(err);
-        }
+        });
+
+        proc.on('close', (exitCode) => {
+          resolve({ exitCode: exitCode ?? 1, stdout, stderr });
+        });
       });
-    });
+    }
+
+    async function runLatexmkDirect(): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+      return new Promise((resolve, reject) => {
+        const texFile = Array.from(files.keys()).find((f) => f.endsWith('.tex')) || 'main.tex';
+        const proc = spawn('latexmk', [
+          '-pdf',
+          '-interaction=nonstopmode',
+          '-halt-on-error',
+          `-jobname=output`,
+          texFile,
+        ], {
+          timeout: (env.LATEX_TIMEOUT_SECONDS + 10) * 1000,
+          cwd: workDir,
+          env: { ...process.env, HOME: workDir },
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        proc.stdout.on('data', (chunk) => { stdout += chunk; });
+        proc.stderr.on('data', (chunk) => { stderr += chunk; });
+
+        proc.on('error', reject);
+        proc.on('close', (exitCode) => {
+          resolve({ exitCode: exitCode ?? 1, stdout, stderr });
+        });
+      });
+    }
+
+    const { exitCode, stdout, stderr } = await runLatexmk();
+
+    // Read log output
+    let logOutput = '';
+    try {
+      logOutput = await readFile(logPath, 'utf8');
+    } catch {
+      logOutput = stdout + '\n' + stderr;
+    }
+
+    const hasPdf = await readFile(pdfPath).then(() => true).catch(() => false);
+
+    if (exitCode !== 0 || !hasPdf) {
+      const errorLines = logOutput
+        .split('\n')
+        .filter((l) => l.startsWith('!'))
+        .slice(0, 20)
+        .join('\n');
+
+      await db
+        .update(schema.compilations)
+        .set({
+          status: 'error',
+          logOutput,
+          errorSummary: errorLines || 'Compilation failed - check LaTeX syntax',
+          finishedAt: new Date(),
+          compileTimeMs: Date.now() - startTime,
+        })
+        .where(eq(schema.compilations.id, compilationId));
+
+      throw new Error('Compilation failed');
+    }
+
+    try {
+      // Move PDF to persistent storage
+      const storageDir = join(env.PDF_STORAGE_PATH, projectId);
+      await mkdir(storageDir, { recursive: true });
+      const destPath = join(storageDir, `${compilationId}.pdf`);
+      
+      const pdfBuffer = await readFile(pdfPath);
+      await writeFile(destPath, pdfBuffer);
+
+      await db
+        .update(schema.compilations)
+        .set({
+          status: 'success',
+          logOutput,
+          pdfPath: destPath,
+          pdfSizeBytes: pdfBuffer.length,
+          finishedAt: new Date(),
+          compileTimeMs: Date.now() - startTime,
+        })
+        .where(eq(schema.compilations.id, compilationId));
+    } catch (err) {
+      await db
+        .update(schema.compilations)
+        .set({
+          status: 'error',
+          logOutput,
+          errorSummary: 'Failed to read PDF output',
+          finishedAt: new Date(),
+          compileTimeMs: Date.now() - startTime,
+        })
+        .where(eq(schema.compilations.id, compilationId));
+      throw err;
+    }
 
   } catch (err) {
     // If status not already set by inner handler, mark as error

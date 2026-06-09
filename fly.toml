@@ -1,0 +1,43 @@
+# Fly.io configuration
+# See https://fly.io/docs/reference/configuration/
+
+app = "overleaf"
+primary_region = "ord"  # Chicago — change to your nearest region
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = true   # Free tier: stop when idle
+  auto_start_machines = true  # Wake on first request
+  min_machines_running = 0
+  processes = ["app"]
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 3001
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls"]
+
+  [[services.http_checks]]
+    interval = "30s"
+    timeout = "5s"
+    path = "/api/v1/health"
+    method = "GET"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3001"
+  PDF_STORAGE_PATH = "/var/data/overleaf/pdfs"
+
+[deploy]
+  release_command = "cd /app && pnpm db:migrate && pnpm db:seed"

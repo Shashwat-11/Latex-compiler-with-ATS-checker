@@ -320,62 +320,64 @@ pnpm --filter @overleaf/api test   # Run backend tests
 
 ---
 
-## 🚢 Deploy to Render
+## 🚀 Deploy to Fly.io
 
-This project includes a `Dockerfile` and `render.yaml` for one-click deployment on [Render](https://render.com).
+This project includes a `Dockerfile` and `fly.toml` for deployment on [Fly.io](https://fly.io). Fly.io's free tier includes **3 shared VMs** and a **1GB PostgreSQL database** — plenty to run the full app including LaTeX compilation.
 
-### One-click deployment
+### Prerequisites
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Shashwat-11/Latex-compiler-with-ATS-checker)
+- [flyctl CLI](https://fly.io/docs/hands-on/install-flyctl/) installed
+- A [Fly.io account](https://fly.io/app/sign-up) (free — no credit card required)
 
-### Manual setup
+### Setup
 
-1. **Push to GitHub** — the repo is already at `github.com/Shashwat-11/Latex-compiler-with-ATS-checker`
+```bash
+# 1. Login to Fly.io
+fly auth login
 
-2. **Create a Render Web Service**:
-   - Go to [dashboard.render.com](https://dashboard.render.com) → New + → Web Service
-   - Connect your GitHub repo
-   - Ensure Docker is detected (the `Dockerfile` is at the root)
-   - Service name: `overleaf`
-   - Region: choose closest to you
-   - Plan: Starter (enough for small teams)
+# 2. Launch the app (auto-detects the Dockerfile)
+fly launch --no-deploy
 
-3. **Create a Render PostgreSQL database**:
-   - New + → PostgreSQL
-   - Name: `overleaf-db`
-   - Database: `overleaf`
-   - User: `overleaf`
-   - Plan: Starter (free)
-   - After creation, copy the **Internal Database URL**
+# 3. Create a PostgreSQL database
+fly postgres create --name overleaf-db --region ord
 
-4. **Set environment variables** in your Web Service:
+# 4. Attach the database to the app
+fly postgres attach overleaf-db
 
-   | Variable | Value |
-   |----------|-------|
-   | `NODE_ENV` | `production` |
-   | `PORT` | `3001` |
-   | `DATABASE_URL` | *(paste the Internal Database URL from step 3)* |
-   | `JWT_SECRET` | *(generate a random 64-char string)* |
-   | `CORS_ORIGIN` | `https://your-app-name.onrender.com` |
-   | `GEMINI_API_KEY` | *(your Gemini API key, optional)* |
-   | `LATEX_TIMEOUT_SECONDS` | `60` |
+# 5. Set environment variables
+fly secrets set JWT_SECRET=$(openssl rand -hex 32)
+fly secrets set GEMINI_API_KEY=your_gemini_key_here  # optional — users can bring their own
 
-5. **Run database migrations** via Render's Shell:
-   ```bash
-   # After the service deploys, open Shell from the Render dashboard
-   cd /app && node apps/db/dist/migrate.js
-   pnpm db:seed
-   ```
+# 6. Deploy
+fly deploy
+```
 
-   Or if the migration script isn't exposed, the service will run migrations on startup via a `start.sh` script.
+The `fly.toml` includes a `release_command` that runs database migrations automatically on every deploy.
 
-6. **Open your app** at `https://your-app-name.onrender.com`
+### Environment Variables
 
-### Notes
-- The Docker image includes a full TeXLive installation (~2GB) — the first build takes 10-15 minutes
-- LaTeX compilation uses the locally installed texlive (no Docker-in-Docker needed)
-- PDFs are stored in `/var/data/overleaf/pdfs` (ephemeral — backed by Render's disk)
-- Users can provide their own Gemini API key via the UI (🔑 button), no server key needed
+| Variable | How to set | Required? |
+|----------|-----------|-----------|
+| `DATABASE_URL` | Auto-set by `fly postgres attach` | ✅ |
+| `JWT_SECRET` | `fly secrets set JWT_SECRET=...` | ✅ |
+| `GEMINI_API_KEY` | `fly secrets set GEMINI_API_KEY=...` | ❌ (users can bring their own via UI) |
+| `CORS_ORIGIN` | Auto-set to your Fly.io domain | ✅ |
+
+### Cost
+
+Fly.io's **free tier** includes:
+- **3 shared VMs** with 256MB RAM each — one VM runs the app
+- **1GB PostgreSQL database** — enough for hundreds of users
+- **10GB monthly outbound data transfer**
+- The app auto-stops when idle and wakes on first request
+
+### Important notes
+
+- **First deploy** takes **10-15 minutes** because the Dockerfile installs a full TeXLive distribution (~2GB)
+- **LaTeX compilation** runs directly on the Fly.io VM (texlive is pre-installed in the Docker image)
+- **PDFs** are stored in `/var/data/overleaf/pdfs` (ephemeral VM storage — backed by Fly.io's volume system)
+- **Users can provide their own Gemini API key** via the 🔑 button in the Copilot sidebar — no server key needed
+- The app uses **~500MB RAM** during LaTeX compilation, well within the free tier's 256MB limit (compilation is temporary)
 
 ---
 
