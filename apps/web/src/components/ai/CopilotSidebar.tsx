@@ -73,21 +73,28 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
   const queryClient = useQueryClient();
   const { messages, isLoading, error, sendMessage, stopGeneration, clearMessages, loadHistory } = useAiChat({ projectId });
 
-  // Execute file actions from assistant messages (only when content includes markers)
+  // Track which file actions we've already executed (by filename) to avoid duplicates
+  const executedActions = useRef<Set<string>>(new Set());
+
+  // Execute file actions from assistant messages — only when streaming is done
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     if (!lastMsg || lastMsg.role !== 'assistant' || lastMsg.id.startsWith('temp-')) return;
+    // Only process when streaming is complete (no longer loading)
+    if (isLoading) return;
     if (!lastMsg.content.includes('[CREATE_FILE') && !lastMsg.content.includes('[EDIT_FILE')) return;
+    // Use a marker to check this is the final complete message
+    if (!lastMsg.content.endsWith('"') && !lastMsg.content.endsWith('`') && !lastMsg.content.endsWith('\n') && !lastMsg.content.endsWith('.')) return;
 
-    // Use content hash to avoid re-processing the same content
-    const contentHash = lastMsg.content.length + '-' + lastMsg.content.slice(-50);
-    if (processedMessages.current.has(contentHash)) return;
-
-    processedMessages.current.add(contentHash);
     const actions = parseFileActions(lastMsg.content);
+    if (actions.length === 0) return;
 
     for (const action of actions) {
-      const actionKey = `${action.type}-${action.filename}-${Date.now()}`;
+      const actionKey = `${action.type}:${action.filename}`;
+      // Skip if we already executed this exact action
+      if (executedActions.current.has(actionKey)) continue;
+      executedActions.current.add(actionKey);
+
       setFileActions((prev) => [...prev, { msg: `${action.type === 'create' ? 'Creating' : 'Editing'} ${action.filename}...`, status: 'pending' }]);
 
       (async () => {

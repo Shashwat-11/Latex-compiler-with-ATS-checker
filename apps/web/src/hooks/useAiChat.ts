@@ -78,12 +78,22 @@ export function useAiChat({ projectId }: UseAiChatOptions) {
         { id: assistantMsgId, role: 'assistant', content: '', createdAt: new Date().toISOString() },
       ]);
 
+      // Stream timeout guard — force stop after 60s
+      const streamTimeout = setTimeout(() => {
+        abortRef.current?.abort();
+        setError('AI response timed out. Please try again.');
+      }, 60000);
+
+      let streamDone = false;
+
       while (true) {
-        const { done, value } = await reader.read();
+        const result = await reader.read();
+        const { done, value } = result;
         if (done) break;
 
         const chunk = decoder.decode(value);
         const lines = chunk.split('\n');
+        let receivedDone = false;
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -91,9 +101,13 @@ export function useAiChat({ projectId }: UseAiChatOptions) {
               const data = JSON.parse(line.slice(6));
               if (data.error) {
                 setError(data.error);
+                receivedDone = true;
                 break;
               }
-              if (data.done) break;
+              if (data.done) {
+                receivedDone = true;
+                break;
+              }
               if (data.content) {
                 fullContent += data.content;
                 // Update the assistant message content
@@ -108,6 +122,18 @@ export function useAiChat({ projectId }: UseAiChatOptions) {
             }
           }
         }
+
+        if (receivedDone) {
+          streamDone = true;
+          break;
+        }
+      }
+
+      clearTimeout(streamTimeout);
+
+      // If stream ended without a done signal, still mark complete
+      if (!streamDone && fullContent.length > 0) {
+        // Content was received but no done event — still treat as complete
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {
