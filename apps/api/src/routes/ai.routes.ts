@@ -99,9 +99,12 @@ export async function aiRoutes(app: FastifyInstance) {
     const userId = request.user.id;
     const { projectId } = request.params as { projectId: string };
 
-    // Get or create conversation
+    // Get or create conversation (scoped to user + project)
     const existingConv = await db.query.aiConversations.findFirst({
-      where: eq(schema.aiConversations.projectId, projectId),
+      where: (conversations, { and, eq }) => and(
+        eq(conversations.projectId, projectId),
+        eq(conversations.userId, userId),
+      ),
       orderBy: [desc(schema.aiConversations.createdAt)],
     });
 
@@ -206,9 +209,13 @@ export async function aiRoutes(app: FastifyInstance) {
     preHandler: [authenticate, verifyProjectAccess],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { projectId } = request.params as { projectId: string };
+    const userId = request.user.id;
 
     const conversation = await db.query.aiConversations.findFirst({
-      where: eq(schema.aiConversations.projectId, projectId),
+      where: (conversations, { and, eq }) => and(
+        eq(conversations.projectId, projectId),
+        eq(conversations.userId, userId),
+      ),
       orderBy: [desc(schema.aiConversations.createdAt)],
     });
 
