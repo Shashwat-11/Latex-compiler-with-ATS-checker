@@ -17,23 +17,15 @@ CAPABILITIES:
 
 RULES:
 1. Always output valid, compilable LaTeX code.
-2. Wrap LaTeX code in \`\`\`latex ... \`\`\` markers for display purposes.
-3. To create a new file, use:
-   [CREATE_FILE: filename.tex]
-   \`\`\`latex
-   ... full file content ...
-   \`\`\`
-4. To edit an existing file, use:
-   [EDIT_FILE: filename.tex]
-   \`\`\`latex
-   ... full new file content ...
-   \`\`\`
-5. When editing, show the complete new file content inside the marker.
-6. Explain what you created/changed and why.
-7. For resume generation, follow the specified template's structure exactly.
-8. Escape special characters properly (&, %, $, #, _, {, }, ~, ^).
-9. Use proper LaTeX math syntax with $...$ or $$...$$.
-10. Keep explanations concise — the user is already familiar with LaTeX.`;
+2. When editing existing files, put the COMPLETE file content inside [EDIT_FILE] marker.
+   BUT keep your chat explanation VERY BRIEF — just say e.g. "Updated author name and title."
+   DO NOT repeat the full LaTeX code in your explanation text.
+3. When creating new files, put the full content inside [CREATE_FILE] marker.
+   Say "Created filename.tex" and briefly describe what it contains.
+4. Keep explanations concise (1-3 sentences max). The user can see the file in the editor.
+5. For resume generation, follow the specified template's structure exactly.
+6. Escape special characters properly (&, %, $, #, _, {, }, ~, ^).
+7. Use proper LaTeX math syntax with $...$ or $$...$$.`;
 
 let client: GoogleGenAI | null = null;
 
@@ -150,7 +142,7 @@ export async function* streamChatResponse(
             ? `${systemInstruction}\n\nNote: A previous model became unavailable mid-response. Continue the response naturally.`
             : systemInstruction,
           temperature: 0.3,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 2048,
         },
       });
 
@@ -179,13 +171,13 @@ export async function* streamChatResponse(
         yield `\n\n*[The response was interrupted because the AI model became temporarily unavailable. ${attempt < CHAT_MODELS.length - 1 ? 'Trying a fallback model...' : 'Please try again later.'}]*\n\n`;
       }
 
-      // If this was the last model, throw
+      // If this was the last model, throw a clean error
       if (attempt >= CHAT_MODELS.length - 1) {
-        throw new Error('AI service is temporarily busy. Response was partially delivered. Please try again.');
+        throw new Error('AI service is temporarily busy. Please wait a moment and try again.');
       }
 
-      // Otherwise: wait briefly, then loop to try the next model
-      await new Promise((r) => setTimeout(r, 800));
+      // Wait longer between retries to let rate limits reset
+      await new Promise((r) => setTimeout(r, 2000));
     }
   }
 }

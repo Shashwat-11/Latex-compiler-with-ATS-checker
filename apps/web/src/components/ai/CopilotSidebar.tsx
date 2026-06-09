@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, X, Loader2, StopCircle, MessageSquare, Sparkles, CheckCircle } from 'lucide-react';
+import { Send, Bot, User, X, Loader2, StopCircle, MessageSquare, Sparkles, CheckCircle, FileEdit } from 'lucide-react';
 import { useAiChat } from '../../hooks/useAiChat.js';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api.js';
@@ -66,7 +66,7 @@ function parseFileActions(content: string): FileAction[] {
 
 export function CopilotSidebar({ projectId, currentFileId, currentSelection, isOpen, onToggle }: Props) {
   const [input, setInput] = useState('');
-  const [fileActions, setFileActions] = useState<Array<{ msg: string; status: 'pending' | 'done' | 'error' }>>([]);
+  const [fileChanges, setFileChanges] = useState<Array<{ file: string; type: string; status: 'pending' | 'done' | 'error'; time: Date }>>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedMessages = useRef<Set<string>>(new Set());
@@ -93,7 +93,7 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
       if (executedActions.current.has(actionKey)) continue;
       executedActions.current.add(actionKey);
 
-      setFileActions((prev) => [...prev, { msg: `${action.type === 'create' ? 'Creating' : 'Editing'} ${action.filename}...`, status: 'pending' }]);
+      setFileChanges((prev) => [...prev, { file: action.filename, type: action.type, status: 'pending', time: new Date() }]);
 
       (async () => {
         try {
@@ -144,10 +144,12 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
             }
           }
 
-          setFileActions((prev) => [
-            ...prev.slice(0, -1),
-            { msg: `✅ ${action.type === 'create' ? 'Created' : 'Edited'} ${action.filename}`, status: 'done' },
-          ]);
+          setFileChanges((prev) => {
+            const next = [...prev];
+            const idx = next.findIndex((f) => f.file === action.filename && f.status === 'pending');
+            if (idx >= 0) next[idx] = { ...next[idx]!, status: 'done' };
+            return next;
+          });
           // Invalidate file tree query to refresh the file explorer
           queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'files'] });
           // Force a refetch of the file content query if cached
@@ -156,10 +158,12 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
           }
         } catch (err: any) {
           const errMsg = err?.response?.data?.error?.message || err.message;
-          setFileActions((prev) => [
-            ...prev.slice(0, -1),
-            { msg: `❌ Failed to ${action.type} ${action.filename}: ${errMsg}`, status: 'error' },
-          ]);
+          setFileChanges((prev) => {
+            const next = [...prev];
+            const idx = next.findIndex((f) => f.file === action.filename && f.status === 'pending');
+            if (idx >= 0) next[idx] = { ...next[idx]!, status: 'error' };
+            return next;
+          });
         }
       })();
     }
@@ -173,7 +177,7 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, fileActions]);
+  }, [messages, fileChanges]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -223,6 +227,28 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
         </div>
       </div>
 
+      {/* File Changes */}
+      {fileChanges.length > 0 && (
+        <div className="shrink-0 px-3 py-2 border-b border-[var(--border-muted)]">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <FileEdit className="h-3 w-3 text-[var(--text-tertiary)]" />
+            <span className="text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">File Changes</span>
+          </div>
+          <div className="space-y-1">
+            {fileChanges.map((fc, i) => (
+              <div key={i} className="flex items-center gap-2 text-[12px]">
+                {fc.status === 'pending' ? <Loader2 className="h-3 w-3 animate-spin text-[var(--text-tertiary)]" /> :
+                 fc.status === 'done' ? <CheckCircle className="h-3 w-3 text-[var(--success)]" /> :
+                 <X className="h-3 w-3 text-[var(--danger)]" />}
+                <span className={fc.status === 'done' ? 'text-[var(--success)]' : fc.status === 'error' ? 'text-[var(--danger)]' : 'text-[var(--text-tertiary)]'}>
+                  {fc.type === 'create' ? 'Created' : 'Edited'} {fc.file}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
         {messages.length === 0 && !isLoading && (
@@ -236,18 +262,6 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
         )}
         {messages.map((msg) => (
           <MessageBubble key={msg.id} message={msg} />
-        ))}
-        {fileActions.map((fa, i) => (
-          <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-sm)] text-[12px] ${
-            fa.status === 'done' ? 'text-[var(--success)]' :
-            fa.status === 'error' ? 'text-[var(--danger)]' :
-            'text-[var(--text-tertiary)]'
-          }`}>
-            {fa.status === 'pending' ? <Loader2 className="h-3 w-3 animate-spin" /> :
-             fa.status === 'done' ? <CheckCircle className="h-3 w-3" /> :
-             <X className="h-3 w-3" />}
-            {fa.msg}
-          </div>
         ))}
         {error && (
           <div className="rounded-[var(--radius-sm)] bg-[var(--danger-muted)] border border-[var(--danger)] px-3 py-2 text-[12px] text-[var(--danger)]">
