@@ -320,6 +320,65 @@ pnpm --filter @overleaf/api test   # Run backend tests
 
 ---
 
+## 🚢 Deploy to Render
+
+This project includes a `Dockerfile` and `render.yaml` for one-click deployment on [Render](https://render.com).
+
+### One-click deployment
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Shashwat-11/Latex-compiler-with-ATS-checker)
+
+### Manual setup
+
+1. **Push to GitHub** — the repo is already at `github.com/Shashwat-11/Latex-compiler-with-ATS-checker`
+
+2. **Create a Render Web Service**:
+   - Go to [dashboard.render.com](https://dashboard.render.com) → New + → Web Service
+   - Connect your GitHub repo
+   - Ensure Docker is detected (the `Dockerfile` is at the root)
+   - Service name: `overleaf`
+   - Region: choose closest to you
+   - Plan: Starter (enough for small teams)
+
+3. **Create a Render PostgreSQL database**:
+   - New + → PostgreSQL
+   - Name: `overleaf-db`
+   - Database: `overleaf`
+   - User: `overleaf`
+   - Plan: Starter (free)
+   - After creation, copy the **Internal Database URL**
+
+4. **Set environment variables** in your Web Service:
+
+   | Variable | Value |
+   |----------|-------|
+   | `NODE_ENV` | `production` |
+   | `PORT` | `3001` |
+   | `DATABASE_URL` | *(paste the Internal Database URL from step 3)* |
+   | `JWT_SECRET` | *(generate a random 64-char string)* |
+   | `CORS_ORIGIN` | `https://your-app-name.onrender.com` |
+   | `GEMINI_API_KEY` | *(your Gemini API key, optional)* |
+   | `LATEX_TIMEOUT_SECONDS` | `60` |
+
+5. **Run database migrations** via Render's Shell:
+   ```bash
+   # After the service deploys, open Shell from the Render dashboard
+   cd /app && node apps/db/dist/migrate.js
+   pnpm db:seed
+   ```
+
+   Or if the migration script isn't exposed, the service will run migrations on startup via a `start.sh` script.
+
+6. **Open your app** at `https://your-app-name.onrender.com`
+
+### Notes
+- The Docker image includes a full TeXLive installation (~2GB) — the first build takes 10-15 minutes
+- LaTeX compilation uses the locally installed texlive (no Docker-in-Docker needed)
+- PDFs are stored in `/var/data/overleaf/pdfs` (ephemeral — backed by Render's disk)
+- Users can provide their own Gemini API key via the UI (🔑 button), no server key needed
+
+---
+
 ## 📄 License
 
 This project is for educational and personal use. LaTeX templates are licensed under LPPL.

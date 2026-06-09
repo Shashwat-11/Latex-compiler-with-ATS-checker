@@ -3,11 +3,17 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
 import { env } from './config/env.js';
 import { registerRoutes } from './routes/index.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { securityHeaders } from './middleware/security-headers.js';
 import { requestLogger } from './middleware/request-logger.js';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export async function buildApp() {
   const app = Fastify({
@@ -55,6 +61,24 @@ export async function buildApp() {
 
   // Routes
   await registerRoutes(app);
+
+  // In production, serve the built frontend static files
+  if (env.NODE_ENV === 'production') {
+    const webDist = join(__dirname, '..', '..', '..', 'web', 'dist');
+    await app.register(fastifyStatic, {
+      root: webDist,
+      prefix: '/',
+      wildcard: false,
+    });
+
+    // SPA fallback — serve index.html for all non-API routes
+    app.setNotFoundHandler((request, reply) => {
+      if (request.url.startsWith('/api/')) {
+        return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Route not found' } });
+      }
+      return reply.sendFile('index.html');
+    });
+  }
 
   return app;
 }
