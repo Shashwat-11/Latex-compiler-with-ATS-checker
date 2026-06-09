@@ -77,37 +77,67 @@ export function ProjectPage() {
           </Panel>
           <Separator className="w-1 bg-[var(--border-default)] hover:bg-[var(--accent)] transition-colors cursor-col-resize" />
 
-          {/* Center: Editor + Copilot (vertical stack) */}
+          {/* Center: Editor + Copilot (vertical stack via CSS flex) */}
           <Panel defaultSize="45" minSize="25">
-            <Group orientation={aiSidebarOpen ? 'vertical' : 'vertical'} id="editor-center-layout" style={{ height: '100%' }}>
-              <Panel defaultSize={aiSidebarOpen ? 65 : 100} minSize={30}>
-                <div className="flex flex-col h-full min-w-0">
-                  <EditorTabs />
-                  <div className="flex-1 min-h-0">
-                    {activeFileId && activeContent !== undefined ? (
-                      <CodeEditor key={activeFileId} fileId={activeFileId} initialContent={activeContent} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-tertiary)]">Select a file to edit</div>
-                    )}
-                  </div>
-                  <EditorStatusBar projectId={id} isSaving={isSaving} isDirty={isDirty} />
+            <div className="flex flex-col h-full min-w-0">
+              {/* Editor area — flex-1 takes remaining space */}
+              <div className="flex flex-col min-h-0" style={{ flex: aiSidebarOpen ? '1 1 60%' : '1 1 100%' }}>
+                <EditorTabs />
+                <div className="flex-1 min-h-0">
+                  {activeFileId && activeContent !== undefined ? (
+                    <CodeEditor key={activeFileId} fileId={activeFileId} initialContent={activeContent} />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-tertiary)]">Select a file to edit</div>
+                  )}
                 </div>
-              </Panel>
+                <EditorStatusBar projectId={id} isSaving={isSaving} isDirty={isDirty} />
+              </div>
 
               {aiSidebarOpen && (
                 <>
-                  <Separator className="h-1 bg-[var(--border-default)] hover:bg-[var(--accent)] transition-colors cursor-row-resize shrink-0" />
-                  <Panel defaultSize={35} minSize={15} maxSize={55}>
+                  {/* Drag handle */}
+                  <div
+                    className="h-1 bg-[var(--border-default)] hover:bg-[var(--accent)] hover:h-[3px] transition-all cursor-row-resize shrink-0 relative"
+                    onMouseDown={(e) => {
+                      const startY = e.clientY;
+                      const editorEl = (e.target as HTMLElement).parentElement!;
+                      const editorSection = editorEl.querySelector(':scope > div:first-child') as HTMLElement;
+                      const copilotSection = editorEl.querySelector(':scope > div:last-child') as HTMLElement;
+                      if (!editorSection || !copilotSection) return;
+
+                      const totalHeight = editorEl.clientHeight;
+                      const onMove = (me: MouseEvent) => {
+                        const delta = me.clientY - startY;
+                        const editorPct = ((editorSection.clientHeight + delta) / totalHeight) * 100;
+                        if (editorPct > 20 && editorPct < 85) {
+                          editorSection.style.flex = `1 1 ${editorPct}%`;
+                          copilotSection.style.flex = `1 1 ${100 - editorPct}%`;
+                        }
+                      };
+                      const onUp = () => {
+                        document.removeEventListener('mousemove', onMove);
+                        document.removeEventListener('mouseup', onUp);
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                      };
+                      document.addEventListener('mousemove', onMove);
+                      document.addEventListener('mouseup', onUp);
+                      document.body.style.cursor = 'row-resize';
+                      document.body.style.userSelect = 'none';
+                    }}
+                  />
+                  {/* Copilot panel — flex-shrink with initial size */}
+                  <div className="flex flex-col min-h-0" style={{ flex: '1 1 35%' }}>
                     <CopilotSidebar
                       projectId={id}
                       currentFileId={activeFileId ?? undefined}
                       isOpen={aiSidebarOpen}
                       onToggle={() => setAiSidebarOpen(false)}
                     />
-                  </Panel>
+                  </div>
                 </>
               )}
-            </Group>
+            </div>
           </Panel>
 
           <Separator className="w-1 bg-[var(--border-default)] hover:bg-[var(--accent)] transition-colors cursor-col-resize" />
