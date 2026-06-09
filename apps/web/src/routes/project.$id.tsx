@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useProject } from '../hooks/useProjects.js';
@@ -16,6 +16,59 @@ import { useCompilationSSE } from '../hooks/useCompilationSSE.js';
 import { useCompilation } from '../hooks/useCompilation.js';
 import { useAutoSave } from '../hooks/useAutoSave.js';
 import { Spinner } from '../components/shared/Spinner.js';
+
+// ─── VSCode-style resizable Copilot panel (pixel-based) ───
+
+function ResizableCopilot({ projectId, activeFileId, onClose }: { projectId: string; activeFileId?: string; onClose: () => void }) {
+  const [height, setHeight] = useState(200);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ startY: number; startH: number } | null>(null);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = panelRef.current?.clientHeight ?? 200;
+    dragRef.current = { startY, startH };
+
+    const onMove = (me: MouseEvent) => {
+      if (!dragRef.current) return;
+      const newH = dragRef.current.startH - (me.clientY - dragRef.current.startY);
+      setHeight(Math.max(80, Math.min(800, newH)));
+    };
+
+    const onUp = () => {
+      dragRef.current = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  return (
+    <div ref={panelRef} className="flex flex-col shrink-0 border-t border-[var(--border-default)]" style={{ height: `${height}px` }}>
+      {/* Drag handle */}
+      <div
+        onMouseDown={onMouseDown}
+        className="h-[4px] bg-[var(--border-default)] hover:bg-[var(--accent)] hover:h-[5px] transition-all cursor-row-resize shrink-0 relative"
+      />
+      {/* Copilot content */}
+      <div className="flex-1 min-h-0">
+        <CopilotSidebar
+          projectId={projectId}
+          currentFileId={activeFileId}
+          isOpen={true}
+          onToggle={onClose}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>();
@@ -77,40 +130,31 @@ export function ProjectPage() {
           </Panel>
           <Separator className="w-1 bg-[var(--border-default)] hover:bg-[var(--accent)] transition-colors cursor-col-resize" />
 
-          {/* Center: Editor + Copilot (vertical via react-resizable-panels) */}
+          {/* Center: Editor + Copilot (VSCode-style pixel resize) */}
           <Panel defaultSize="45" minSize="25">
-            <Group orientation="vertical" id="editor-center-stack" style={{ height: '100%' }}>
-              <Panel defaultSize={65} minSize={20}>
-                <div className="flex flex-col h-full min-w-0">
-                  <EditorTabs />
-                  <div className="flex-1 min-h-0">
-                    {activeFileId && activeContent !== undefined ? (
-                      <CodeEditor key={activeFileId} fileId={activeFileId} initialContent={activeContent} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-tertiary)]">Select a file to edit</div>
-                    )}
-                  </div>
-                  <EditorStatusBar projectId={id} isSaving={isSaving} isDirty={isDirty} />
+            <div className="flex flex-col h-full min-w-0">
+              {/* Editor area */}
+              <div className="flex flex-col min-h-0 flex-1">
+                <EditorTabs />
+                <div className="flex-1 min-h-0">
+                  {activeFileId && activeContent !== undefined ? (
+                    <CodeEditor key={activeFileId} fileId={activeFileId} initialContent={activeContent} />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-tertiary)]">Select a file to edit</div>
+                  )}
                 </div>
-              </Panel>
-              <Separator
-                className="h-[4px] bg-[var(--border-default)] hover:bg-[var(--accent)] transition-colors cursor-row-resize shrink-0"
-                style={{ display: aiSidebarOpen ? undefined : 'none' }}
-              />
-              <Panel
-                defaultSize={35}
-                minSize={10}
-                maxSize={80}
-                style={{ display: aiSidebarOpen ? undefined : 'none' }}
-              >
-                <CopilotSidebar
+                <EditorStatusBar projectId={id} isSaving={isSaving} isDirty={isDirty} />
+              </div>
+
+              {/* Copilot panel (pixel-based height, hidden when closed) */}
+              {aiSidebarOpen && (
+                <ResizableCopilot
                   projectId={id}
-                  currentFileId={activeFileId ?? undefined}
-                  isOpen={aiSidebarOpen}
-                  onToggle={() => setAiSidebarOpen(false)}
+                  activeFileId={activeFileId ?? undefined}
+                  onClose={() => setAiSidebarOpen(false)}
                 />
-              </Panel>
-            </Group>
+              )}
+            </div>
           </Panel>
 
           <Separator className="w-1 bg-[var(--border-default)] hover:bg-[var(--accent)] transition-colors cursor-col-resize" />
