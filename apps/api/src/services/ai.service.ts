@@ -33,6 +33,68 @@ function getClient(): GoogleGenAI {
   return client;
 }
 
+// ─── Error Parsing ───
+
+function extractErrorMessage(error: unknown): { cleanMessage: string; isOverloaded: boolean } {
+  try {
+    const raw = error as any;
+    let message = raw?.message || String(error) || 'Unknown error';
+    let isOverloaded = false;
+
+    // Try to parse nested JSON in the message string (common with Gemini SDK)
+    if (typeof message === 'string' && message.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(message);
+        if (parsed.error) {
+          message = parsed.error.message || message;
+          if (parsed.error.status === 'UNAVAILABLE' || parsed.error.code === 503 || parsed.error.code === 429) {
+            isOverloaded = true;
+          }
+        }
+      } catch { /* not JSON, use as-is */ }
+    }
+
+    // Check raw error properties
+    if (raw?.code === 503 || raw?.code === 429 || raw?.status === 'UNAVAILABLE') isOverloaded = true;
+    if (typeof message === 'string' && (message.includes('503') || message.includes('UNAVAILABLE') || message.includes('high demand'))) isOverloaded = true;
+
+    return { cleanMessage: message.replace(/^["'\s]+|["'\s]+$/g, ''), isOverloaded };
+  } catch {
+    return { cleanMessage: 'An unexpected error occurred', isOverloaded: false };
+  }
+}
+
+// ─── Model Fallback ───
+
+const CHAT_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
+const COMPLETION_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+const RESUME_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+
+async function withModelFallback<T>(
+  models: string[],
+  callModel: (model: string) => Promise<T>,
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let i = 0; i < models.length; i++) {
+    try {
+      return await callModel(models[i]!);
+    } catch (error: any) {
+      lastError = error;
+      const { isOverloaded } = extractErrorMessage(error);
+      if (isOverloaded && i < models.length - 1) {
+        console.warn(`AI model ${models[i]!} overloaded, falling back to ${models[i + 1]!}`);
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  const { cleanMessage } = extractErrorMessage(lastError);
+  throw new Error(`All AI models are currently unavailable. ${cleanMessage}`);
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -41,6 +103,8 @@ export interface ChatMessage {
 export interface CompletionResult {
   text: string;
 }
+
+// ─── Chat Completion (streaming via async generator) ───
 
 export async function* streamChatResponse(
   messages: ChatMessage[],
@@ -58,14 +122,16 @@ export async function* streamChatResponse(
     : SYSTEM_PROMPT;
 
   try {
-    const stream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash',
-      contents,
-      config: {
-        systemInstruction,
-        temperature: 0.3,
-        maxOutputTokens: 4096,
-      },
+    const stream = await withModelFallback(CHAT_MODELS, async (model) => {
+      return ai.models.generateContentStream({
+        model,
+        contents,
+        config: {
+          systemInstruction,
+          temperature: 0.3,
+          maxOutputTokens: 4096,
+        },
+      });
     });
 
     for await (const chunk of stream) {
@@ -75,14 +141,14 @@ export async function* streamChatResponse(
       }
     }
   } catch (error: any) {
-    const message = error?.message || 'Unknown error';
-    if (message.includes('API_KEY') || message.includes('API key')) {
-      throw new Error('AI service: Invalid or missing API key');
+    const { cleanMessage, isOverloaded } = extractErrorMessage(error);
+    if (cleanMessage.includes('API_KEY') || cleanMessage.includes('API key')) {
+      throw new Error('AI service: Invalid or missing API key. Check your GEMINI_API_KEY.');
     }
-    if (message.includes('RATE_LIMIT') || message.includes('rate')) {
-      throw new Error('AI service: Rate limit exceeded. Please try again later.');
+    if (isOverloaded) {
+      throw new Error('AI service is temporarily busy. Please try again in a few moments.');
     }
-    throw new Error(`AI service: ${message}`);
+    throw new Error(`AI service: ${cleanMessage}`);
   }
 }
 
@@ -108,13 +174,15 @@ ${suffix}
 Complete the code at [CURSOR]:`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: prompt,
-      config: {
-        temperature: 0.2,
-        maxOutputTokens: 256,
-      },
+    const response = await withModelFallback(COMPLETION_MODELS, async (model) => {
+      return ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          temperature: 0.2,
+          maxOutputTokens: 256,
+        },
+      });
     });
 
     const text = response.text?.trim() || '';
@@ -125,8 +193,11 @@ Complete the code at [CURSOR]:`;
 
     return completions.length > 0 ? completions : [text];
   } catch (error: any) {
-    const message = error?.message || 'Unknown error';
-    throw new Error(`AI completion service: ${message}`);
+    const { cleanMessage, isOverloaded } = extractErrorMessage(error);
+    if (isOverloaded) {
+      throw new Error('Completion service temporarily busy. Please try again.');
+    }
+    throw new Error(`Completion service: ${cleanMessage}`);
   }
 }
 
@@ -172,13 +243,15 @@ For awesome-cv: use \\cvsection{}, \\cveducation{}, \\cvevent{}, \\cvtag{}
 Return a JSON object mapping section names to their LaTeX content.`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: sectionsPrompt,
-      config: {
-        temperature: 0.3,
-        maxOutputTokens: 8192,
-      },
+    const response = await withModelFallback(RESUME_MODELS, async (model) => {
+      return ai.models.generateContent({
+        model,
+        contents: sectionsPrompt,
+        config: {
+          temperature: 0.3,
+          maxOutputTokens: 8192,
+        },
+      });
     });
 
     const generatedText = response.text || '';
@@ -201,7 +274,10 @@ Return a JSON object mapping section names to their LaTeX content.`;
 
     return latex;
   } catch (error: any) {
-    const message = error?.message || 'Unknown error';
-    throw new Error(`Resume generation service: ${message}`);
+    const { cleanMessage, isOverloaded } = extractErrorMessage(error);
+    if (isOverloaded) {
+      throw new Error('Resume generation service temporarily busy. Please try again.');
+    }
+    throw new Error(`Resume generation service: ${cleanMessage}`);
   }
 }
