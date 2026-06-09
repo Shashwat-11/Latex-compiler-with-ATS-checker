@@ -81,7 +81,7 @@ function ResizableCopilot({ projectId, activeFileId, onClose }: { projectId: str
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>();
   const { data: project, isLoading } = useProject(id ?? null);
-  const { activeFileId, fileContents } = useEditorStore();
+  const { activeFileId, fileContents, refreshCounter } = useEditorStore();
   const { compilationId } = useCompilationStore();
   const [aiSidebarOpen, setAiSidebarOpen] = useState(false);
   const autoCompiled = useRef(false);
@@ -146,7 +146,7 @@ export function ProjectPage() {
                 <EditorTabs />
                 <div className="flex-1 min-h-0">
                   {activeFileId && activeContent !== undefined ? (
-                    <CodeEditor key={activeFileId} fileId={activeFileId} initialContent={activeContent} />
+                    <CodeEditor key={`${activeFileId}-${refreshCounter[activeFileId] ?? 0}`} fileId={activeFileId} initialContent={activeContent} />
                   ) : (
                     <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-tertiary)]">Select a file to edit</div>
                   )}

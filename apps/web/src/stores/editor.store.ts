@@ -10,10 +10,13 @@ interface EditorState {
   activeFileId: string | null;
   openTabs: EditorTab[];
   fileContents: Record<string, string>;
+  refreshCounter: Record<string, number>;
   setActiveFile: (fileId: string | null) => void;
   openFile: (fileId: string, name: string, content: string) => void;
   closeTab: (fileId: string) => void;
   updateContent: (fileId: string, content: string) => void;
+  /** Force-refresh a file's content from outside (e.g., AI edits) — bumps refreshCounter */
+  setExternalContent: (fileId: string, content: string) => void;
   markClean: (fileId: string) => void;
   reset: () => void;
 }
@@ -22,8 +25,9 @@ export const useEditorStore = create<EditorState>((set) => ({
   activeFileId: null,
   openTabs: [],
   fileContents: {},
+  refreshCounter: {},
 
-  reset: () => set({ activeFileId: null, openTabs: [], fileContents: {} }),
+  reset: () => set({ activeFileId: null, openTabs: [], fileContents: {}, refreshCounter: {} }),
 
   setActiveFile: (fileId) => set({ activeFileId: fileId }),
 
@@ -58,6 +62,12 @@ export const useEditorStore = create<EditorState>((set) => ({
       openTabs: state.openTabs.map((t) =>
         t.fileId === fileId ? { ...t, isDirty: true } : t
       ),
+    })),
+
+  setExternalContent: (fileId, content) =>
+    set((state) => ({
+      fileContents: { ...state.fileContents, [fileId]: content },
+      refreshCounter: { ...state.refreshCounter, [fileId]: (state.refreshCounter[fileId] || 0) + 1 },
     })),
 
   markClean: (fileId) =>

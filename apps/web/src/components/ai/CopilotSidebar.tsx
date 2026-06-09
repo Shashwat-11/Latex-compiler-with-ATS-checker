@@ -108,10 +108,10 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
             });
             // Try to get file ID from response (different shapes from different APIs)
             fileId = res.data?.id || res.data?.file?.id || null;
-            // Open the new file in the editor
+            // Open the new file in the editor with refresh bump
             if (fileId) {
+              editorStore.setExternalContent(fileId, action.content);
               editorStore.openFile(fileId, action.filename, action.content);
-              editorStore.markClean(fileId);
             }
           } else {
             // Find file by name to get its ID
@@ -134,14 +134,13 @@ export function CopilotSidebar({ projectId, currentFileId, currentSelection, isO
               fileId = res.data?.id || res.data?.file?.id || null;
             }
 
-            // Update the editor content immediately so it reflects in the editor
+            // Update the editor content — use setExternalContent to bump
+            // the refreshCounter so the CodeEditor re-mounts with new content
             if (fileId) {
-              editorStore.updateContent(fileId, action.content);
-              // Opening forces a refresh if the file is not already open
+              editorStore.setExternalContent(fileId, action.content);
               if (!editorStore.openTabs.find((t) => t.fileId === fileId)) {
                 editorStore.openFile(fileId, action.filename, action.content);
               }
-              editorStore.markClean(fileId);
             }
           }
 
