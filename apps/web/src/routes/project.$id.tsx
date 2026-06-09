@@ -20,9 +20,17 @@ import { Spinner } from '../components/shared/Spinner.js';
 // ─── VSCode-style resizable Copilot panel (pixel-based) ───
 
 function ResizableCopilot({ projectId, activeFileId, onClose }: { projectId: string; activeFileId?: string; onClose: () => void }) {
-  const [height, setHeight] = useState(200);
+  const [height, setHeight] = useState(250);
   const panelRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
+
+  // Set initial height to 35% of the parent container on mount
+  useEffect(() => {
+    const parent = panelRef.current?.parentElement;
+    if (parent) {
+      setHeight(Math.round(parent.clientHeight * 0.35));
+    }
+  }, []);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
